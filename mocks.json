@@ -13,27 +13,60 @@
       "path": "/users/:id",
       "response": {
         "id": "{{id}}",
-        "name": "User {{id}}"
+        "name": "User {{id}}",
+        "createdAt": "{{now}}"
       }
     },
     {
       "method": "POST",
       "path": "/users",
       "response": {
-        "id": "{{id}}",
-        "name": "{{name}}"
+        "id": "{{random 1000 9999}}",
+        "name": "{{name}}",
+        "createdAt": "{{now}}"
+      },
+      "headers": {
+        "X-Created-At": "{{now}}",
+        "X-Request-ID": "{{uuid}}"
       }
     },
     {
       "method": "GET",
       "path": "/error",
-      "errorCode": 500
+      "errorCode": 500,
+      "errorMessage": "Custom error message"
     },
     {
       "method": "GET",
       "path": "/slow",
-      "response": { "message": "This response is delayed" },
+      "response": { 
+        "message": "This response is delayed",
+        "timestamp": "{{now}}"
+      },
       "delay": 2000
+    },
+    {
+      "method": "GET",
+      "path": "/conditional",
+      "conditions": {
+        "query": {
+          "type": "premium"
+        }
+      },
+      "response": {
+        "message": "Premium content",
+        "features": ["advanced", "premium"]
+      },
+      "fallback": {
+        "message": "Basic content",
+        "features": ["basic"]
+      }
     }
-  ]
+  ],
+  "globals": {
+    "headers": {
+      "X-Powered-By": "Easy Mock Server",
+      "X-Response-Time": "{{responseTime}}"
+    }
+  }
 } 
