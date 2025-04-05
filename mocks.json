@@ -1,0 +1,39 @@
+{
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/users",
+      "response": [
+        { "id": 1, "name": "John Doe" },
+        { "id": 2, "name": "Jane Smith" }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id",
+      "response": {
+        "id": "{{id}}",
+        "name": "User {{id}}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/users",
+      "response": {
+        "id": "{{id}}",
+        "name": "{{name}}"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/error",
+      "errorCode": 500
+    },
+    {
+      "method": "GET",
+      "path": "/slow",
+      "response": { "message": "This response is delayed" },
+      "delay": 2000
+    }
+  ]
+} 

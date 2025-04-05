@@ -1,0 +1,22 @@
+{
+  "name": "npm-mock-server",
+  "version": "1.0.0",
+  "description": "A simple CLI tool for creating mock HTTP servers",
+  "main": "src/lib/server.js",
+  "bin": {
+    "mock-server": "./src/cli/index.js"
+  },
+  "scripts": {
+    "start": "node src/cli/index.js mocks.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["mock", "server", "api", "testing"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "express": "^4.18.2",
+    "fastify": "^4.24.3",
+    "handlebars": "^4.7.8"
+  }
+}
