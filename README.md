@@ -1,4 +1,4 @@
-# NPM Mock Server
+# Easy Mock Server
 
 A simple CLI tool for creating mock HTTP servers for rapid prototyping and testing.
 
@@ -13,7 +13,7 @@ A simple CLI tool for creating mock HTTP servers for rapid prototyping and testi
 ## Installation
 
 ```bash
-npm install -g npm-mock-server
+npm install -g easy-mock-server
 ```
 
 ## Usage
@@ -37,7 +37,7 @@ npm install -g npm-mock-server
 2. Start the server:
 
 ```bash
-mock-server path/to/mocks.json
+easy-mock-server path/to/mocks.json
 ```
 
 Or using npm:
