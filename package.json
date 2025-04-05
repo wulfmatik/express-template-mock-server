@@ -7,8 +7,7 @@
     "easy-mock-server": "./src/cli/index.js"
   },
   "scripts": {
-    "start": "node src/cli/index.js mocks.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/cli/index.js mocks.json"
   },
   "keywords": ["mock", "server", "api", "testing"],
   "author": "",

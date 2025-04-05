@@ -50,9 +50,10 @@ class MockServer {
             ...req.query,
             ...req.body
           });
+          res.send(responseData);
+        } else {
+          res.json(responseData);
         }
-
-        res.json(responseData);
       });
     }
   }
@@ -61,7 +62,12 @@ class MockServer {
     await this.loadConfig();
     this.setupRoutes();
 
-    this.watcher = chokidar.watch(this.configPath).on('change', async () => {
+    this.watcher = chokidar.watch(this.configPath, {
+      awaitWriteFinish: {
+        stabilityThreshold: 100,
+        pollInterval: 100
+      }
+    }).on('change', async () => {
       console.log('Config changed, reloading...');
       await this.loadConfig();
       this.app._router.stack = [];
