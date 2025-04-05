@@ -297,6 +297,151 @@ Common issues and solutions:
    - Verify JSON validity
    - Check console errors
 
+## Development Setup
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm (v6 or higher)
+- Git
+
+### Getting Started
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/easy-mock-server.git
+cd easy-mock-server
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create a development configuration:
+```bash
+cp mocks.json mocks.dev.json
+```
+
+4. Start the development server:
+```bash
+npm start
+```
+
+### Development Workflow
+
+1. **Making Changes**:
+   - Create a new branch: `git checkout -b feature/your-feature`
+   - Make your changes
+   - Test locally using `npm start`
+   - Commit changes: `git commit -m "Description of changes"`
+
+2. **Testing**:
+   - Start the server: `npm start`
+   - Test endpoints using curl or Postman
+   - Check logs for any errors
+   - Verify hot reloading works
+
+3. **Debugging**:
+   - Use `console.log()` for basic debugging
+   - For advanced debugging, use Node.js inspector:
+     ```bash
+     node --inspect src/cli/index.js mocks.json
+     ```
+   - Open Chrome DevTools and connect to the debugger
+
+### Common Development Tasks
+
+1. **Adding New Features**:
+   - Add new route handlers in `src/lib/server.js`
+   - Update configuration validation
+   - Add new template helpers
+   - Update documentation
+
+2. **Fixing Bugs**:
+   - Reproduce the issue
+   - Add test cases
+   - Fix the code
+   - Verify the fix
+   - Update documentation if needed
+
+3. **Testing Configuration Changes**:
+   - Edit `mocks.dev.json`
+   - Server should reload automatically
+   - Test the changes
+   - Update documentation if needed
+
+### Development Tips
+
+1. **Hot Reloading**:
+   - Changes to `mocks.dev.json` trigger automatic reload
+   - Changes to server code require restart
+   - Use `npm run dev` for development mode
+
+2. **Logging**:
+   - Server logs are in the console
+   - Error details are logged with stack traces
+   - Request/response details are logged
+
+3. **Performance**:
+   - Monitor memory usage
+   - Check response times
+   - Watch for memory leaks
+
+4. **Security**:
+   - Validate all inputs
+   - Sanitize error messages
+   - Use secure headers
+   - Handle sensitive data properly
+
+### Development Environment
+
+1. **Recommended Tools**:
+   - VS Code with ESLint extension
+   - Postman for API testing
+   - Chrome DevTools for debugging
+   - Git for version control
+
+2. **Environment Variables**:
+   ```bash
+   # .env.development
+   PORT=3000
+   MOCK_CONFIG_PATH=mocks.dev.json
+   NODE_ENV=development
+   ```
+
+3. **Code Style**:
+   - Follow ESLint rules
+   - Use consistent formatting
+   - Add JSDoc comments
+   - Write clear commit messages
+
+### Troubleshooting Development Issues
+
+1. **Server Won't Start**:
+   - Check port availability
+   - Verify config file path
+   - Check for syntax errors
+   - Look for missing dependencies
+
+2. **Hot Reload Not Working**:
+   - Check file permissions
+   - Verify file watcher is running
+   - Check for errors in console
+   - Restart the server
+
+3. **Template Errors**:
+   - Check template syntax
+   - Verify variable names
+   - Check helper function usage
+   - Look for missing context
+
+4. **Performance Issues**:
+   - Monitor memory usage
+   - Check for memory leaks
+   - Profile response times
+   - Optimize template processing
+
 ## Contributing
 
 1. Fork the repository
