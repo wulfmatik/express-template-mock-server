@@ -9,6 +9,7 @@ A simple CLI tool for creating mock HTTP servers for rapid prototyping and testi
 - Hot reloading on config changes
 - Latency simulation
 - Error simulation
+- Environment variable configuration
 
 ## Installation
 
@@ -47,6 +48,17 @@ npm start
 ```
 
 ## Configuration Options
+
+### Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+PORT=3000              # Server port (default: 3000)
+MOCK_CONFIG_PATH=mocks.json  # Path to mock config (default: mocks.json)
+```
+
+### Route Configuration
 
 - `method`: HTTP method (GET, POST, etc.)
 - `path`: Route path (supports params like `/users/:id`)

@@ -3,11 +3,12 @@ const chokidar = require('chokidar');
 const Handlebars = require('handlebars');
 const fs = require('fs').promises;
 const path = require('path');
+require('dotenv').config();
 
 class MockServer {
   constructor(configPath) {
     this.app = express();
-    this.configPath = configPath;
+    this.configPath = configPath || process.env.MOCK_CONFIG_PATH || 'mocks.json';
     this.config = null;
     this.watcher = null;
   }
@@ -56,7 +57,7 @@ class MockServer {
     }
   }
 
-  async start(port = 3000) {
+  async start(port) {
     await this.loadConfig();
     this.setupRoutes();
 
@@ -67,9 +68,10 @@ class MockServer {
       this.setupRoutes();
     });
 
+    const serverPort = port || process.env.PORT || 3000;
     return new Promise((resolve) => {
-      this.app.listen(port, () => {
-        console.log(`Mock server running on port ${port}`);
+      this.app.listen(serverPort, () => {
+        console.log(`Mock server running on port ${serverPort}`);
         resolve();
       });
     });
