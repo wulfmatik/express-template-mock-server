@@ -23,6 +23,24 @@ class MockServer {
     }
   }
 
+  processTemplate(data, context) {
+    if (typeof data === 'string' && data.includes('{{')) {
+      const template = Handlebars.compile(data);
+      return template(context);
+    } else if (typeof data === 'object' && data !== null) {
+      if (Array.isArray(data)) {
+        return data.map(item => this.processTemplate(item, context));
+      } else {
+        const result = {};
+        for (const [key, value] of Object.entries(data)) {
+          result[key] = this.processTemplate(value, context);
+        }
+        return result;
+      }
+    }
+    return data;
+  }
+
   setupRoutes() {
     this.app.use(express.json());
 
@@ -42,18 +60,14 @@ class MockServer {
           await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        let responseData = response;
-        if (typeof response === 'string' && response.includes('{{')) {
-          const template = Handlebars.compile(response);
-          responseData = template({
-            ...req.params,
-            ...req.query,
-            ...req.body
-          });
-          res.send(responseData);
-        } else {
-          res.json(responseData);
-        }
+        const context = {
+          ...req.params,
+          ...req.query,
+          ...req.body
+        };
+
+        const responseData = this.processTemplate(response, context);
+        res.json(responseData);
       });
     }
   }
