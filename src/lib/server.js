@@ -10,7 +10,10 @@ require('dotenv').config();
 Handlebars.registerHelper('now', () => new Date().toISOString());
 Handlebars.registerHelper('random', (min, max) => Math.floor(Math.random() * (max - min + 1)) + min);
 Handlebars.registerHelper('uuid', () => uuidv4());
-Handlebars.registerHelper('responseTime', () => Date.now() - startTime);
+Handlebars.registerHelper('responseTime', (options) => {
+  const startTime = options.data.root.startTime;
+  return Date.now() - startTime;
+});
 
 class MockServer {
   constructor(configPath) {
@@ -103,12 +106,6 @@ class MockServer {
       next();
     });
 
-    // Add error handling middleware
-    this.app.use((err, req, res, next) => {
-      console.error('Error processing request:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    });
-
     for (const route of this.config.routes) {
       const method = route.method.toLowerCase();
       const path = route.path;
@@ -166,6 +163,12 @@ class MockServer {
         }
       });
     }
+
+    // Add error handling middleware after routes
+    this.app.use((err, req, res, next) => {
+      console.error('Error processing request:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    });
   }
 
   async start(port) {
