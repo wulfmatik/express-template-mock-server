@@ -5,6 +5,19 @@
 const Handlebars = require('handlebars');
 const { v4: uuidv4 } = require('uuid');
 
+/**
+ * Logs a message to the console
+ * @param {string} message - The message to log
+ * @param {boolean} [debug=false] - Whether this is a debug message
+ */
+const log = (message, debug = false) => {
+  // Only show debug logs in development or test mode, or if DEBUG env var is set
+  const isDebugEnabled = process.env.NODE_ENV !== 'production' || process.env.DEBUG;
+  if (!debug || isDebugEnabled) {
+    console.log(message);
+  }
+};
+
 // Register custom Handlebars helpers
 /**
  * Handlebars helper that returns the current date and time in ISO format
@@ -110,7 +123,7 @@ const processTemplate = (template, data) => {
     
     // Debug info for startTime
     if (typeof safeData.startTime !== 'number') {
-      console.log(`Warning: startTime is ${safeData.startTime} in template data`);
+      log(`Warning: startTime is ${safeData.startTime} in template data`, true);
       // Add a fallback startTime
       safeData.startTime = Date.now();
     }
@@ -119,13 +132,13 @@ const processTemplate = (template, data) => {
     const result = compiledTemplate(safeData);
 
     if (result === undefined || result === '') {
-      console.log(`Empty result for template: ${template} with data:`, JSON.stringify(safeData));
+      log(`Empty result for template: ${template} with data: ${JSON.stringify(safeData)}`, true);
       throw new Error('Template produced empty result');
     }
 
     return result;
   } catch (error) {
-    console.log(`Template processing error: ${error.message} for template: ${template}`);
+    log(`Template processing error: ${error.message} for template: ${template}`, true);
     throw new Error(`Template processing error: ${error.message}`);
   }
 };
@@ -153,7 +166,7 @@ const processJsonTemplate = (json, data) => {
         try {
           result[key] = processJsonTemplate(value, data);
         } catch (error) {
-          console.log(`Error processing key ${key}:`, error.message);
+          log(`Error processing key ${key}: ${error.message}`, true);
           throw error;
         }
       }
@@ -162,7 +175,7 @@ const processJsonTemplate = (json, data) => {
 
     return json;
   } catch (error) {
-    console.log(`JSON template processing error: ${error.message}`);
+    log(`JSON template processing error: ${error.message}`, true);
     throw new Error(`Template processing error: ${error.message}`);
   }
 };

@@ -32,9 +32,14 @@ const createState = () => ({
 /**
  * Logs a message to the console
  * @param {string} message - The message to log
+ * @param {boolean} [debug=false] - Whether this is a debug message
  */
-const log = (message) => {
-  console.log(message);
+const log = (message, debug = false) => {
+  // Only show debug logs in development or test mode, or if DEBUG env var is set
+  const isDebugEnabled = process.env.NODE_ENV !== 'production' || process.env.DEBUG;
+  if (!debug || isDebugEnabled) {
+    console.log(message);
+  }
 };
 
 /**
@@ -80,7 +85,7 @@ const setupMiddleware = (app, state, config) => {
     // Add a helper to calculate responseTime at any point
     req.getResponseTime = () => Date.now() - req.startTime;
     
-    console.log(`[${new Date().toISOString()}] Setting startTime: ${req.startTime}`);
+    log(`[${new Date().toISOString()}] Setting startTime: ${req.startTime}`, true);
     
     next();
   });
@@ -104,7 +109,7 @@ const setupMiddleware = (app, state, config) => {
             responseTime: Date.now() - req.startTime 
           };
           
-          console.log(`Processing global header ${header} with data:`, JSON.stringify(headerData));
+          log(`Processing global header ${header} with data:`, JSON.stringify(headerData), true);
           
           res.set(header, processTemplate(value, headerData));
         } catch (error) {
@@ -137,20 +142,20 @@ const setupMiddleware = (app, state, config) => {
  */
 const setupRoutes = (app, config) => {
   // Setup routes from config
-  console.log('Setting up routes:', config.routes.length);
+  log('Setting up routes:', config.routes.length, true);
   
   for (const route of config.routes) {
-    console.log(`Registering route: ${route.method.toUpperCase()} ${route.path}`);
+    log(`Registering route: ${route.method.toUpperCase()} ${route.path}`, true);
     
     app[route.method.toLowerCase()](route.path, async (req, res) => {
       try {
-        console.log(`Processing request to ${route.path}`);
-        console.log(`Request startTime: ${req.startTime}`);
+        log(`Processing request to ${route.path}`, true);
+        log(`Request startTime: ${req.startTime}`, true);
         
         // Check conditions
         if (route.conditions && !checkConditions(route.conditions, req)) {
           if (route.fallback) {
-            console.log(`Condition not met, using fallback for ${route.path}`);
+            log(`Condition not met, using fallback for ${route.path}`, true);
             res.json(route.fallback);
             return;
           }
@@ -171,7 +176,7 @@ const setupRoutes = (app, config) => {
                 responseTime: Date.now() - req.startTime
               };
               
-              console.log(`Processing header ${header} with data:`, JSON.stringify(headerTemplateData));
+              log(`Processing header ${header} with data:`, JSON.stringify(headerTemplateData), true);
               
               res.set(header, processTemplate(value, headerTemplateData));
             } catch (error) {
@@ -202,7 +207,7 @@ const setupRoutes = (app, config) => {
           responseTime: Date.now() - req.startTime
         };
         
-        console.log(`Processing response for ${route.path} with data:`, JSON.stringify(templateData));
+        log(`Processing response for ${route.path} with data:`, JSON.stringify(templateData), true);
 
         try {
           const response = processJsonTemplate(route.response, templateData);

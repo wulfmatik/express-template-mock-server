@@ -1,39 +1,63 @@
 {
   "name": "easy-mock-server",
   "version": "1.0.0",
-  "description": "A flexible and powerful mock server for development and testing",
-  "main": "src/cli/index.js",
+  "description": "A configurable HTTP mock server with support for templates, conditions, delays and more",
+  "main": "src/lib/server.js",
   "bin": {
     "easy-mock-server": "src/cli/index.js"
   },
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "!src/**/__tests__/**"
+  ],
   "scripts": {
     "start": "node src/cli/index.js mocks.json",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.js",
+    "prepare": "npm run test",
+    "prepublishOnly": "npm run lint"
   },
   "keywords": [
     "mock",
     "server",
     "api",
+    "http",
+    "rest",
     "testing",
-    "development"
+    "development",
+    "express",
+    "templates"
   ],
-  "author": "",
+  "author": "Blake Crawford",
   "license": "ISC",
   "dependencies": {
+    "chokidar": "^3.5.3",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "fastify": "^4.24.3",
+    "handlebars": "^4.7.8",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.23.3",
-    "@babel/preset-env": "^7.23.3",
-    "babel-jest": "^29.7.0",
-    "chokidar": "^4.0.3",
-    "dotenv": "^16.3.1",
-    "handlebars": "^4.7.8",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jest": "^27.9.0",
     "jest": "^29.7.0",
-    "supertest": "^6.3.4"
-  }
+    "prettier": "^3.1.1",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wulfmatik/easy-mock-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wulfmatik/easy-mock-server/issues"
+  },
+  "homepage": "https://github.com/wulfmatik/easy-mock-server#readme"
 }

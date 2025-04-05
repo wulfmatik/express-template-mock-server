@@ -1,12 +1,10 @@
 const createMockServer = require('../lib/server');
 const { 
   processTemplate,
-  processJsonTemplate,
   checkConditions,
   validateConfig 
 } = require('../lib/server-utils');
 const fs = require('fs').promises;
-const path = require('path');
 const request = require('supertest');
 
 jest.mock('fs', () => ({
@@ -28,8 +26,6 @@ jest.spyOn(process, 'exit').mockImplementation(() => {});
 
 describe('MockServer', () => {
   let server;
-  let app;
-  let state;
   const mockConfig = {
     globals: {
       headers: {

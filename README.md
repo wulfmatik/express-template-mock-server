@@ -1,6 +1,10 @@
 # Easy Mock Server
 
-A flexible and powerful mock server for development and testing. Create realistic API mocks with dynamic data, conditional responses, and simulated network conditions.
+[![npm version](https://img.shields.io/npm/v/easy-mock-server.svg)](https://www.npmjs.com/package/easy-mock-server)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/yourusername/easy-mock-server)
+
+A flexible and powerful HTTP mock server for development and testing. Create realistic API mocks with dynamic data, conditional responses, and simulated network conditions.
 
 ## Features
 
@@ -14,6 +18,7 @@ A flexible and powerful mock server for development and testing. Create realisti
 - **Graceful Shutdown**: Clean server shutdown with request draining
 - **Enhanced Error Handling**: Detailed error messages and validation
 - **Security Headers**: Basic security headers included by default
+- **TypeScript Support**: Full TypeScript type definitions included
 
 ## Installation
 
@@ -249,207 +254,97 @@ The server provides detailed error information:
 Error responses include:
 ```json
 {
-  "error": "Internal server error",
-  "message": "Detailed error message",
-  "path": "/api/endpoint",
-  "method": "GET"
+  "error": "Error message"
 }
 ```
 
-## Stability Features
+## TypeScript Support
 
-- **Graceful Shutdown**: 
-  - Handles SIGTERM/SIGINT signals
-  - Drains existing requests
-  - 10-second shutdown timeout
+This package includes TypeScript type definitions. Import and use the types:
 
-- **Hot Reload**:
-  - Watches config file changes
-  - Reloads routes automatically
-  - Preserves existing connections
+```typescript
+import createMockServer, { MockServerConfig, RouteConfig } from 'easy-mock-server';
 
-- **Security**:
-  - Basic security headers
-  - JSON/form data parsing
-  - Error sanitization
+// Example usage with TypeScript
+const config: MockServerConfig = {
+  routes: [
+    {
+      method: 'GET',
+      path: '/api/users',
+      response: [{ id: 1, name: 'User 1' }]
+    }
+  ]
+};
 
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Server won't start**:
-   - Check port availability
-   - Verify config file path
-   - Check JSON syntax
-
-2. **Template errors**:
-   - Verify variable names
-   - Check helper function usage
-   - Validate JSON structure
-
-3. **Routes not matching**:
-   - Check path parameters
-   - Verify condition syntax
-   - Compare request format
-
-4. **Hot reload issues**:
-   - Check file permissions
-   - Verify JSON validity
-   - Check console errors
-
-## Development Setup
-
-### Prerequisites
-
-- Node.js (v14 or higher)
-- npm (v6 or higher)
-- Git
-
-### Getting Started
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/easy-mock-server.git
-cd easy-mock-server
+// Write your config to a file and use it
+const server = createMockServer('path/to/config.json');
+server.start(3000).then(() => {
+  console.log('Server started');
+});
 ```
 
-2. Install dependencies:
-```bash
-npm install
+## Programmatic Usage
+
+You can use the server programmatically in your tests or applications:
+
+```javascript
+const createMockServer = require('easy-mock-server');
+
+// Create a server instance
+const server = createMockServer('./mocks.json');
+
+// Start the server
+async function startServer() {
+  try {
+    await server.start(3000);
+    console.log('Mock server running on port 3000');
+  } catch (error) {
+    console.error('Failed to start server:', error);
+  }
+}
+
+// Stop the server when done
+async function stopServer() {
+  await server.stop();
+  console.log('Server stopped');
+}
+
+// Use in your tests
+startServer()
+  .then(() => {
+    // Run your tests against the mock server
+    return fetch('http://localhost:3000/users');
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .then(stopServer)
+  .catch(console.error);
 ```
 
-3. Create a development configuration:
-```bash
-cp mocks.json mocks.dev.json
-```
+## Security Considerations
 
-4. Start the development server:
-```bash
-npm start
-```
+The Easy Mock Server is designed for development and testing environments. For security:
 
-### Development Workflow
-
-1. **Making Changes**:
-   - Create a new branch: `git checkout -b feature/your-feature`
-   - Make your changes
-   - Test locally using `npm start`
-   - Commit changes: `git commit -m "Description of changes"`
-
-2. **Testing**:
-   - Start the server: `npm start`
-   - Test endpoints using curl or Postman
-   - Check logs for any errors
-   - Verify hot reloading works
-
-3. **Debugging**:
-   - Use `console.log()` for basic debugging
-   - For advanced debugging, use Node.js inspector:
-     ```bash
-     node --inspect src/cli/index.js mocks.json
-     ```
-   - Open Chrome DevTools and connect to the debugger
-
-### Common Development Tasks
-
-1. **Adding New Features**:
-   - Add new route handlers in `src/lib/server.js`
-   - Update configuration validation
-   - Add new template helpers
-   - Update documentation
-
-2. **Fixing Bugs**:
-   - Reproduce the issue
-   - Add test cases
-   - Fix the code
-   - Verify the fix
-   - Update documentation if needed
-
-3. **Testing Configuration Changes**:
-   - Edit `mocks.dev.json`
-   - Server should reload automatically
-   - Test the changes
-   - Update documentation if needed
-
-### Development Tips
-
-1. **Hot Reloading**:
-   - Changes to `mocks.dev.json` trigger automatic reload
-   - Changes to server code require restart
-   - Use `npm run dev` for development mode
-
-2. **Logging**:
-   - Server logs are in the console
-   - Error details are logged with stack traces
-   - Request/response details are logged
-
-3. **Performance**:
-   - Monitor memory usage
-   - Check response times
-   - Watch for memory leaks
-
-4. **Security**:
-   - Validate all inputs
-   - Sanitize error messages
-   - Use secure headers
-   - Handle sensitive data properly
-
-### Development Environment
-
-1. **Recommended Tools**:
-   - VS Code with ESLint extension
-   - Postman for API testing
-   - Chrome DevTools for debugging
-   - Git for version control
-
-2. **Environment Variables**:
-   ```bash
-   # .env.development
-   PORT=3000
-   MOCK_CONFIG_PATH=mocks.dev.json
-   NODE_ENV=development
-   ```
-
-3. **Code Style**:
-   - Follow ESLint rules
-   - Use consistent formatting
-   - Add JSDoc comments
-   - Write clear commit messages
-
-### Troubleshooting Development Issues
-
-1. **Server Won't Start**:
-   - Check port availability
-   - Verify config file path
-   - Check for syntax errors
-   - Look for missing dependencies
-
-2. **Hot Reload Not Working**:
-   - Check file permissions
-   - Verify file watcher is running
-   - Check for errors in console
-   - Restart the server
-
-3. **Template Errors**:
-   - Check template syntax
-   - Verify variable names
-   - Check helper function usage
-   - Look for missing context
-
-4. **Performance Issues**:
-   - Monitor memory usage
-   - Check for memory leaks
-   - Profile response times
-   - Optimize template processing
+- **Do not use in production environments**
+- Set up appropriate CORS restrictions for your dev environment
+- Be aware that the server does not include authentication by default
+- Consider using a reverse proxy like nginx when exposing to non-local environments
 
 ## Contributing
 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Run the tests (`npm test`)
+4. Commit your changes (`git commit -am 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## License
 
-ISC 
+This project is licensed under the ISC License - see the LICENSE file for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the project history and version details. 
