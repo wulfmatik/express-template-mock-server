@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const MockServer = require('../lib/server');
+const createMockServer = require('../lib/server');
 const path = require('path');
 
 const configPath = process.argv[2];
@@ -10,9 +10,9 @@ if (!configPath) {
 }
 
 const absoluteConfigPath = path.resolve(process.cwd(), configPath);
-const server = new MockServer(absoluteConfigPath);
+const server = createMockServer(absoluteConfigPath);
 
-server.start().catch(error => {
+server.start(process.env.PORT || 3000).catch(error => {
   console.error('Failed to start server:', error);
   process.exit(1);
 }); 
