@@ -15,8 +15,16 @@ jest.mock('fs', () => ({
   }
 }));
 
-// Mock process.exit
-const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+// Mock chokidar
+jest.mock('chokidar', () => ({
+  watch: jest.fn().mockReturnValue({
+    on: jest.fn().mockReturnThis(),
+    close: jest.fn().mockResolvedValue()
+  })
+}));
+
+// Mock process.exit without assigning to a variable
+jest.spyOn(process, 'exit').mockImplementation(() => {});
 
 describe('MockServer', () => {
   let server;
@@ -257,7 +265,8 @@ describe('MockServer', () => {
 
       process.emit('SIGTERM');
       
-      await shutdownPromise;
+      // Expect that the serverClosed event will be emitted
+      await expect(shutdownPromise).resolves.toBeUndefined();
     });
 
     it('should reject new requests during shutdown', async () => {

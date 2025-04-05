@@ -1,7 +1,10 @@
+/**
+ * @module server
+ * @description Main module for the mock server implementation
+ */
 const express = require('express');
 const chokidar = require('chokidar');
 const fs = require('fs').promises;
-const path = require('path');
 require('dotenv').config();
 
 const {
@@ -14,7 +17,10 @@ const {
 // Fix for MaxListenersExceededWarning
 process.setMaxListeners(50);
 
-// Shared state (minimal, only what's necessary)
+/**
+ * Creates a state object to manage server state
+ * @returns {Object} State object with initial values
+ */
 const createState = () => ({
   isShuttingDown: false,
   shutdownTimeout: null,
@@ -23,12 +29,20 @@ const createState = () => ({
   watcher: null
 });
 
-// Utility functions
+/**
+ * Logs a message to the console
+ * @param {string} message - The message to log
+ */
 const log = (message) => {
   console.log(message);
 };
 
-// Config handling functions
+/**
+ * Loads and parses the configuration file
+ * @param {string} configPath - Path to the configuration file
+ * @returns {Promise<Object>} The parsed configuration
+ * @throws {Error} If the configuration file is invalid or not found
+ */
 const loadConfig = async (configPath) => {
   try {
     const configContent = await fs.readFile(configPath, 'utf8');
@@ -48,11 +62,26 @@ const loadConfig = async (configPath) => {
   }
 };
 
-// Server setup functions
+/**
+ * Sets up middleware for the Express application
+ * @param {Object} app - Express application
+ * @param {Object} state - Server state
+ * @param {Object} config - Server configuration
+ */
 const setupMiddleware = (app, state, config) => {
   // Add middleware for response time tracking
   app.use((req, res, next) => {
+    // Ensure startTime is properly set as a number
     req.startTime = Date.now();
+    
+    // Store startTime on res.locals so it's available in templates
+    res.locals.startTime = req.startTime;
+    
+    // Add a helper to calculate responseTime at any point
+    req.getResponseTime = () => Date.now() - req.startTime;
+    
+    console.log(`[${new Date().toISOString()}] Setting startTime: ${req.startTime}`);
+    
     next();
   });
 
@@ -70,10 +99,14 @@ const setupMiddleware = (app, state, config) => {
     app.use((req, res, next) => {
       for (const [header, value] of Object.entries(config.globals.headers)) {
         try {
-          res.set(header, processTemplate(value, { 
+          const headerData = { 
             startTime: req.startTime,
             responseTime: Date.now() - req.startTime 
-          }));
+          };
+          
+          console.log(`Processing global header ${header} with data:`, JSON.stringify(headerData));
+          
+          res.set(header, processTemplate(value, headerData));
         } catch (error) {
           log(`Error processing global header ${header}: ${error.message}`);
         }
@@ -91,20 +124,33 @@ const setupMiddleware = (app, state, config) => {
   });
 
   // Add error handler
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     log(`Server error: ${err.message}`);
     res.status(500).json({ error: 'Internal server error' });
   });
 };
 
+/**
+ * Sets up routes from the configuration
+ * @param {Object} app - Express application
+ * @param {Object} config - Server configuration
+ */
 const setupRoutes = (app, config) => {
   // Setup routes from config
+  console.log('Setting up routes:', config.routes.length);
+  
   for (const route of config.routes) {
+    console.log(`Registering route: ${route.method.toUpperCase()} ${route.path}`);
+    
     app[route.method.toLowerCase()](route.path, async (req, res) => {
       try {
+        console.log(`Processing request to ${route.path}`);
+        console.log(`Request startTime: ${req.startTime}`);
+        
         // Check conditions
         if (route.conditions && !checkConditions(route.conditions, req)) {
           if (route.fallback) {
+            console.log(`Condition not met, using fallback for ${route.path}`);
             res.json(route.fallback);
             return;
           }
@@ -116,13 +162,18 @@ const setupRoutes = (app, config) => {
         if (route.headers) {
           for (const [header, value] of Object.entries(route.headers)) {
             try {
-              res.set(header, processTemplate(value, {
+              // Make sure startTime is included in the template data
+              const headerTemplateData = {
                 ...req.params,
                 ...req.query,
                 ...req.body,
                 startTime: req.startTime,
                 responseTime: Date.now() - req.startTime
-              }));
+              };
+              
+              console.log(`Processing header ${header} with data:`, JSON.stringify(headerTemplateData));
+              
+              res.set(header, processTemplate(value, headerTemplateData));
             } catch (error) {
               log(`Error processing header ${header}: ${error.message}`);
               res.status(500).json({ error: 'Internal server error' });
@@ -142,7 +193,7 @@ const setupRoutes = (app, config) => {
           await new Promise(resolve => setTimeout(resolve, route.delay));
         }
 
-        // Process response template
+        // Process response template with all necessary data
         const templateData = {
           ...req.params,
           ...req.query,
@@ -150,6 +201,8 @@ const setupRoutes = (app, config) => {
           startTime: req.startTime,
           responseTime: Date.now() - req.startTime
         };
+        
+        console.log(`Processing response for ${route.path} with data:`, JSON.stringify(templateData));
 
         try {
           const response = processJsonTemplate(route.response, templateData);
@@ -171,7 +224,10 @@ const setupRoutes = (app, config) => {
   });
 };
 
-// Server lifecycle functions
+/**
+ * Initiates a graceful server shutdown
+ * @param {Object} state - Server state
+ */
 const gracefulShutdown = (state) => {
   log('\nInitiating graceful shutdown...');
   state.isShuttingDown = true;
@@ -194,6 +250,15 @@ const gracefulShutdown = (state) => {
   }
 };
 
+/**
+ * Starts the server with the provided configuration
+ * @param {Object} app - Express application
+ * @param {Object} state - Server state
+ * @param {string} configPath - Path to the configuration file
+ * @param {number} [port=3000] - Port to listen on
+ * @returns {Promise<void>} Resolves when the server has started
+ * @throws {Error} If the server fails to start
+ */
 const startServer = async (app, state, configPath, port = 3000) => {
   try {
     // Load configuration
@@ -241,6 +306,11 @@ const startServer = async (app, state, configPath, port = 3000) => {
   }
 };
 
+/**
+ * Stops the server and releases all resources
+ * @param {Object} state - Server state
+ * @returns {Promise<void>} Resolves when the server has stopped
+ */
 const stopServer = async (state) => {
   if (state.server) {
     if (state.shutdownTimeout) {
@@ -258,7 +328,11 @@ const stopServer = async (state) => {
   }
 };
 
-// Main server factory function
+/**
+ * Creates a new mock server instance
+ * @param {string} configPath - Path to the configuration file
+ * @returns {Object} Server instance with start and stop methods
+ */
 const createMockServer = (configPath) => {
   const app = express();
   const state = createState();
