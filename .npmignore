@@ -1,0 +1,48 @@
+# Development files
+.git
+.github
+.vscode
+.idea
+.editorconfig
+.eslintrc*
+.prettierrc*
+.eslintignore
+.babelrc
+.gitignore
+.env
+.env.*
+
+# Test files
+__tests__
+*.test.js
+test
+tests
+coverage
+jest.config.js
+
+# Other files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.tgz
+.travis.yml
+appveyor.yml
+.circleci
+
+# Documentation
+docs
+examples
+screenshots
+CONTRIBUTING.md
+CHANGELOG.md
+
+# Configuration files not needed in production
+nodemon.json
+tsconfig.json
+rollup.config.js
+webpack.config.js
+
+# Project specific
+mocks.json 

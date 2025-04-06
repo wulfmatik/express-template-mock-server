@@ -1,10 +1,10 @@
 {
-  "name": "easy-mock-server",
+  "name": "express-template-mock-server",
   "version": "1.0.0",
   "description": "A configurable HTTP mock server with support for templates, conditions, delays and more",
   "main": "src/lib/server.js",
   "bin": {
-    "easy-mock-server": "src/cli/index.js"
+    "express-template-mock-server": "src/cli/index.js"
   },
   "files": [
     "src/**/*.js",
@@ -29,7 +29,8 @@
     "testing",
     "development",
     "express",
-    "templates"
+    "templates",
+    "handlebars"
   ],
   "author": "Blake Crawford",
   "license": "ISC",
@@ -54,10 +55,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wulfmatik/easy-mock-server.git"
+    "url": "git+https://github.com/wulfmatik/express-template-mock-server.git"
   },
   "bugs": {
-    "url": "https://github.com/wulfmatik/easy-mock-server/issues"
+    "url": "https://github.com/wulfmatik/express-template-mock-server/issues"
   },
-  "homepage": "https://github.com/wulfmatik/easy-mock-server#readme"
+  "homepage": "https://github.com/wulfmatik/express-template-mock-server#readme"
 }

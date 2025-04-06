@@ -1,8 +1,8 @@
-# Easy Mock Server
+# Express Template Mock Server
 
-[![npm version](https://img.shields.io/npm/v/easy-mock-server.svg)](https://www.npmjs.com/package/easy-mock-server)
+[![npm version](https://img.shields.io/npm/v/express-template-mock-server.svg)](https://www.npmjs.com/package/express-template-mock-server)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
-[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/yourusername/easy-mock-server)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/wulfmatik/express-template-mock-server)
 
 A flexible and powerful HTTP mock server for development and testing. Create realistic API mocks with dynamic data, conditional responses, and simulated network conditions.
 
@@ -24,10 +24,10 @@ A flexible and powerful HTTP mock server for development and testing. Create rea
 
 ```bash
 # Local installation (recommended)
-npm install easy-mock-server --save-dev
+npm install express-template-mock-server --save-dev
 
 # Global installation
-npm install -g easy-mock-server
+npm install -g express-template-mock-server
 ```
 
 ## Quick Start
@@ -38,7 +38,7 @@ npm install -g easy-mock-server
 {
   "globals": {
     "headers": {
-      "X-Powered-By": "Easy Mock Server",
+      "X-Powered-By": "Express Template Mock Server",
       "X-Response-Time": "{{responseTime}}",
       "Access-Control-Allow-Origin": "*"
     }
@@ -74,10 +74,10 @@ npm install -g easy-mock-server
 
 ```bash
 # Using npx (recommended)
-npx easy-mock-server mocks.json
+npx express-template-mock-server mocks.json
 
 # Using global installation
-easy-mock-server mocks.json
+express-template-mock-server mocks.json
 
 # Using package.json script
 npm start
