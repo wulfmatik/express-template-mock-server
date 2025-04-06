@@ -1,4 +1,4 @@
-# Easy Mock Server
+# Express Template Mock Server
 
 A simple CLI tool for creating mock HTTP servers for rapid prototyping and testing.
 
