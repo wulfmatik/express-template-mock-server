@@ -5,6 +5,7 @@
 const express = require('express');
 const chokidar = require('chokidar');
 const fs = require('fs').promises;
+const cors = require('cors');
 require('dotenv').config();
 
 const {
@@ -74,6 +75,30 @@ const loadConfig = async (configPath) => {
  * @param {Object} config - Server configuration
  */
 const setupMiddleware = (app, state, config) => {
+  // Setup CORS with configurable options
+  if (config.globals && config.globals.cors) {
+    // If cors is explicitly set to false, don't use cors middleware
+    if (config.globals.cors === false) {
+      log('CORS disabled by configuration');
+    } else {
+      // Apply cors middleware with options from config
+      const corsOptions = typeof config.globals.cors === 'object' 
+        ? config.globals.cors 
+        : {}; // Default to empty object for default CORS settings
+      
+      log(`Setting up CORS with options: ${JSON.stringify(corsOptions)}`);
+      app.use(cors(corsOptions));
+      
+      // Setup OPTIONS handler for preflight requests
+      app.options('*', cors(corsOptions));
+    }
+  } else {
+    // Default behavior - enable CORS with default settings
+    log('Setting up CORS with default settings');
+    app.use(cors());
+    app.options('*', cors());
+  }
+
   // Add middleware for response time tracking
   app.use((req, res, next) => {
     // Ensure startTime is properly set as a number

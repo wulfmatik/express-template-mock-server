@@ -18,6 +18,7 @@ A flexible and powerful HTTP mock server for development and testing. Create rea
 - **Graceful Shutdown**: Clean server shutdown with request draining
 - **Enhanced Error Handling**: Detailed error messages and validation
 - **Security Headers**: Basic security headers included by default
+- **Configurable CORS**: Customize Cross-Origin Resource Sharing settings
 - **TypeScript Support**: Full TypeScript type definitions included
 
 ## Installation
@@ -234,6 +235,47 @@ Apply headers to all responses:
   }
 }
 ```
+
+### CORS Configuration
+
+Customize Cross-Origin Resource Sharing (CORS) settings:
+
+```json
+{
+  "globals": {
+    "cors": {
+      "origin": "https://yourfrontend.com",
+      "methods": ["GET", "POST", "PUT", "DELETE"],
+      "allowedHeaders": ["Content-Type", "Authorization"],
+      "exposedHeaders": ["X-Request-ID", "X-Response-Time"],
+      "credentials": true,
+      "maxAge": 86400
+    }
+  }
+}
+```
+
+You can also disable CORS completely:
+
+```json
+{
+  "globals": {
+    "cors": false
+  }
+}
+```
+
+Or use default CORS settings (allow all origins):
+
+```json
+{
+  "globals": {
+    "cors": true
+  }
+}
+```
+
+If not specified, CORS is enabled with default settings (equivalent to `"cors": true`).
 
 ## Error Handling
 

@@ -66,6 +66,9 @@ Handlebars.registerHelper('responseTime', function(options) {
  * Validates the server configuration
  * @param {Object} config - The configuration object to validate
  * @param {Array} config.routes - Array of route configurations
+ * @param {Object} [config.globals] - Global configuration options
+ * @param {Object} [config.globals.headers] - Global headers
+ * @param {Object|boolean} [config.globals.cors] - CORS configuration options
  * @throws {Error} If the configuration is invalid
  */
 const validateConfig = (config) => {
@@ -73,6 +76,22 @@ const validateConfig = (config) => {
     throw new Error('Config must have a "routes" array');
   }
 
+  // Validate global CORS configuration if present
+  if (config.globals && config.globals.cors && typeof config.globals.cors === 'object') {
+    const validCorsFields = [
+      'origin', 'methods', 'allowedHeaders', 'exposedHeaders', 
+      'credentials', 'maxAge', 'preflightContinue', 'optionsSuccessStatus'
+    ];
+    
+    const corsKeys = Object.keys(config.globals.cors);
+    const invalidFields = corsKeys.filter(key => !validCorsFields.includes(key));
+    
+    if (invalidFields.length > 0) {
+      throw new Error(`Invalid CORS configuration fields: ${invalidFields.join(', ')}`);
+    }
+  }
+
+  // Validate routes
   for (const route of config.routes) {
     if (!route.method || !route.path) {
       throw new Error('Each route must have a method and path');

@@ -1,0 +1,64 @@
+{
+  "globals": {
+    "headers": {
+      "X-Powered-By": "Express Template Mock Server",
+      "X-Response-Time": "{{responseTime}}ms"
+    },
+    "cors": {
+      "origin": "https://example.com",
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allowedHeaders": ["Content-Type", "Authorization", "X-Custom-Header"],
+      "exposedHeaders": ["X-Request-ID", "X-Response-Time"],
+      "credentials": true,
+      "maxAge": 86400,
+      "optionsSuccessStatus": 204
+    }
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "response": [
+        {
+          "id": "{{random 1 1000}}",
+          "name": "User {{random 1 100}}",
+          "email": "user{{random 1 100}}@example.com"
+        }
+      ],
+      "headers": {
+        "X-Total-Count": "100",
+        "X-Request-ID": "{{uuid}}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "response": {
+        "id": "{{random 1000 9999}}",
+        "name": "{{name}}",
+        "email": "{{email}}",
+        "createdAt": "{{now}}"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/restricted",
+      "headers": {
+        "X-Protected-Resource": "true"
+      },
+      "conditions": {
+        "headers": {
+          "authorization": "Bearer token123"
+        }
+      },
+      "response": {
+        "message": "This is restricted content",
+        "timestamp": "{{now}}"
+      },
+      "fallback": {
+        "error": "Authentication required",
+        "code": "AUTH_REQUIRED"
+      }
+    }
+  ]
+}

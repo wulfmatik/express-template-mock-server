@@ -31,11 +31,43 @@ declare module 'easy-mock-server' {
   }
 
   /**
+   * CORS configuration options
+   */
+  export interface CorsOptions {
+    /** Configures the Access-Control-Allow-Origin CORS header */
+    origin?: string | string[] | boolean | RegExp | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void);
+    
+    /** Configures the Access-Control-Allow-Methods CORS header */
+    methods?: string | string[];
+    
+    /** Configures the Access-Control-Allow-Headers CORS header */
+    allowedHeaders?: string | string[];
+    
+    /** Configures the Access-Control-Expose-Headers CORS header */
+    exposedHeaders?: string | string[];
+    
+    /** Configures the Access-Control-Allow-Credentials CORS header */
+    credentials?: boolean;
+    
+    /** Configures the Access-Control-Max-Age CORS header */
+    maxAge?: number;
+    
+    /** Pass the CORS preflight response to the next handler */
+    preflightContinue?: boolean;
+    
+    /** Provides a status code to use for successful OPTIONS requests */
+    optionsSuccessStatus?: number;
+  }
+
+  /**
    * Global configuration options
    */
   export interface GlobalConfig {
     /** Headers to include in all responses */
     headers?: Record<string, string>;
+    
+    /** CORS configuration options */
+    cors?: boolean | CorsOptions;
   }
 
   /**

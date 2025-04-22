@@ -291,4 +291,92 @@ describe('MockServer', () => {
       expect(response.body.error).toBe('Server is shutting down');
     });
   });
+
+  describe('CORS Configuration', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'test';
+      server = createMockServer('mocks.json');
+    });
+
+    it('should apply default CORS settings when not specified', async () => {
+      const testConfig = {
+        routes: [
+          {
+            method: 'GET',
+            path: '/test',
+            response: { message: 'Test response' }
+          }
+        ]
+      };
+      fs.readFile.mockResolvedValue(JSON.stringify(testConfig));
+      
+      await server.start(4000);
+      const response = await request('http://localhost:4000').get('/test');
+      expect(response.headers['access-control-allow-origin']).toBe('*');
+    });
+
+    it('should apply custom CORS settings when specified', async () => {
+      const testConfig = {
+        globals: {
+          cors: {
+            origin: 'https://example.com',
+            methods: ['GET', 'POST'],
+            credentials: true
+          }
+        },
+        routes: [
+          {
+            method: 'GET',
+            path: '/test',
+            response: { message: 'Test response' }
+          }
+        ]
+      };
+      fs.readFile.mockResolvedValue(JSON.stringify(testConfig));
+      
+      await server.start(4000);
+      const response = await request('http://localhost:4000')
+        .get('/test')
+        .set('Origin', 'https://example.com');
+      
+      expect(response.headers['access-control-allow-origin']).toBe('https://example.com');
+      expect(response.headers['access-control-allow-credentials']).toBe('true');
+    });
+
+    it('should handle preflight requests correctly', async () => {
+      const testConfig = {
+        globals: {
+          cors: {
+            origin: 'https://example.com',
+            methods: ['GET', 'POST', 'PUT'],
+            allowedHeaders: ['Content-Type', 'Authorization'],
+            optionsSuccessStatus: 204
+          }
+        },
+        routes: [
+          {
+            method: 'GET',
+            path: '/test',
+            response: { message: 'Test response' }
+          }
+        ]
+      };
+      fs.readFile.mockResolvedValue(JSON.stringify(testConfig));
+      
+      await server.start(4000);
+      const response = await request('http://localhost:4000')
+        .options('/test')
+        .set('Origin', 'https://example.com')
+        .set('Access-Control-Request-Method', 'PUT')
+        .set('Access-Control-Request-Headers', 'Content-Type, Authorization');
+      
+      expect(response.status).toBe(204);
+      expect(response.headers['access-control-allow-origin']).toBe('https://example.com');
+      expect(response.headers['access-control-allow-methods']).toContain('PUT');
+      // Headers check is case-insensitive
+      const allowedHeaders = response.headers['access-control-allow-headers'].toLowerCase();
+      expect(allowedHeaders).toContain('content-type');
+      expect(allowedHeaders).toContain('authorization');
+    });
+  });
 }); 
