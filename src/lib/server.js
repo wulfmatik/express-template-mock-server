@@ -294,40 +294,30 @@ const setupRoutes = (app, config) => {
 };
 
 /**
- * Performs graceful shutdown of the server
- * @param {Object} state - Server state object
+ * Initiates a graceful server shutdown
+ * @param {Object} state - Server state
  */
-const gracefulShutdown = async (state) => {
+const gracefulShutdown = (state) => {
   log('\nInitiating graceful shutdown...');
-  
-  if (state.isShuttingDown) {
-    return;
-  }
   
   state.isShuttingDown = true;
   
   if (state.server) {
     state.server.close(() => {
       log('Server closed');
-      
-      if (state.watcher) {
-        state.watcher.close();
-      }
-      
-      // Emit event for tests
       if (process.env.NODE_ENV === 'test') {
         process.emit('serverClosed');
       } else {
         process.exit(0);
       }
     });
-  }
 
-  // Force shutdown after 10 seconds
-  state.shutdownTimeout = setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
+    // Force shutdown after 10 seconds
+    state.shutdownTimeout = setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  }
 };
 
 /**

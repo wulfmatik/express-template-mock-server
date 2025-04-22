@@ -51,12 +51,12 @@ Handlebars.registerHelper('uuid', function() {
  * @returns {number} Response time in milliseconds
  */
 Handlebars.registerHelper('responseTime', function() {
-  // Use startTime from the data context
+  // Original version that's known to work
   if (this && typeof this.startTime === 'number') {
     return Date.now() - this.startTime;
-  } 
-  // If startTime is not available or invalid, log a warning and return 0
-  log('Warning: Could not calculate responseTime - startTime is missing or invalid', true);
+  }
+  
+  // Safer fallback
   return 0;
 });
 
