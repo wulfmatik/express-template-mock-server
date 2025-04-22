@@ -22,7 +22,7 @@
       "path": "/users",
       "response": {
         "id": "{{random 1000 9999}}",
-        "name": "{{name}}",
+        "name": "{{body.name}}",
         "createdAt": "{{now}}"
       },
       "headers": {
@@ -39,7 +39,7 @@
     {
       "method": "GET",
       "path": "/slow",
-      "response": { 
+      "response": {
         "message": "This response is delayed",
         "timestamp": "{{now}}"
       },
@@ -65,8 +65,10 @@
   ],
   "globals": {
     "headers": {
-      "X-Powered-By": "Easy Mock Server",
-      "X-Response-Time": "{{responseTime}}"
+      "X-Powered-By": "Express Template Mock Server",
+      "X-Response-Time": "{{responseTime}}",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY"
     }
   }
 } 

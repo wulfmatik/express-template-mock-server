@@ -1,70 +1,56 @@
 # Express Template Mock Server
 
 [![npm version](https://img.shields.io/npm/v/express-template-mock-server.svg)](https://www.npmjs.com/package/express-template-mock-server)
-[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
-[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/wulfmatik/express-template-mock-server)
+[![Test Coverage](https://img.shields.io/codecov/c/github/wulfmatik/express-template-mock-server/main.svg)](https://codecov.io/gh/wulfmatik/express-template-mock-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A flexible and powerful HTTP mock server for development and testing. Create realistic API mocks with dynamic data, conditional responses, and simulated network conditions.
+A powerful, flexible mock server built on Express with template support for dynamic responses.
 
 ## Features
 
-- **Dynamic Responses**: Template-based responses with variables and helpers
-- **Conditional Responses**: Route-specific logic based on query params, headers, or body
-- **Error Simulation**: Simulate API errors with custom status codes and messages
-- **Response Delays**: Test app behavior under slow network conditions
-- **Hot Reloading**: Changes to mock config apply instantly without restart
-- **Custom Headers**: Set global and route-specific response headers
-- **Template Helpers**: Built-in helpers for timestamps, UUIDs, and random data
-- **Graceful Shutdown**: Clean server shutdown with request draining
-- **Enhanced Error Handling**: Detailed error messages and validation
-- **Security Headers**: Basic security headers included by default
-- **Configurable CORS**: Customize Cross-Origin Resource Sharing settings
-- **TypeScript Support**: Full TypeScript type definitions included
+- **Dynamic Responses**: Use Handlebars templates for flexible response generation
+- **Template Variables**: Built-in variables like `{{id}}`, `{{random}}`, `{{now}}`, and `{{uuid}}`
+- **Custom Headers**: Set global and route-specific headers
+- **Delay Simulation**: Test your application with simulated network delays
+- **Conditional Responses**: Return different responses based on request parameters
+- **CORS Support**: Pre-configured for cross-origin requests
+- **Middleware Support**: Custom middleware for advanced use cases
 
 ## Installation
 
-```bash
-# Local installation (recommended)
-npm install express-template-mock-server --save-dev
+### Local Installation (recommended)
 
-# Global installation
+```bash
+npm install express-template-mock-server --save-dev
+```
+
+### Global Installation
+
+```bash
 npm install -g express-template-mock-server
 ```
 
 ## Quick Start
 
-1. Create a `mocks.json` file:
+1. Create a `mocks.json` file in your project root:
 
 ```json
 {
-  "globals": {
-    "headers": {
-      "X-Powered-By": "Express Template Mock Server",
-      "X-Response-Time": "{{responseTime}}",
-      "Access-Control-Allow-Origin": "*"
-    }
+  "port": 3000,
+  "headers": {
+    "X-Powered-By": "Express Template Mock Server"
   },
   "routes": [
     {
+      "path": "/users/:id",
       "method": "GET",
-      "path": "/users",
-      "response": [
-        {
-          "id": "{{random 1 1000}}",
-          "name": "User {{random 1 100}}",
-          "email": "user{{random 1 100}}@example.com",
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "{{id}}",
+          "name": "User {{id}}",
           "createdAt": "{{now}}"
         }
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/users/:id",
-      "response": {
-        "id": "{{id}}",
-        "name": "User {{id}}",
-        "requestId": "{{uuid}}",
-        "timestamp": "{{now}}"
       }
     }
   ]
@@ -74,319 +60,121 @@ npm install -g express-template-mock-server
 2. Start the server:
 
 ```bash
-# Using npx (recommended)
-npx express-template-mock-server mocks.json
-
-# Using global installation
-express-template-mock-server mocks.json
-
-# Using package.json script
-npm start
+npx express-template-mock-server
 ```
+
+Or if installed globally:
+
+```bash
+express-template-mock-server
+```
+
+3. Access your mock API at `http://localhost:3000/users/123`
 
 ## Configuration
 
 ### Environment Variables
 
-Create a `.env` file in your project root:
+- `PORT`: Set the server port (default: 3000)
+- `CONFIG_PATH`: Path to your mocks.json file (default: ./mocks.json)
+- `CORS_ENABLED`: Enable CORS (default: true)
+- `AUTO_RELOAD`: Enable hot reloading of config (default: true)
 
-```bash
-PORT=3000                    # Server port (default: 3000)
-MOCK_CONFIG_PATH=mocks.json  # Config file path (default: mocks.json)
-```
+### Route Properties
 
-### Route Configuration
+- `method`: HTTP method (GET, POST, PUT, PATCH, DELETE, OPTIONS)
+- `path`: URL path, can include parameters like `:id`
+- `response`: Response body (object, array, or string)
+- `statusCode`: HTTP status code (default: 200)
+- `delay`: Response delay in milliseconds
+- `headers`: Custom response headers
+- `conditions`: Requirements for the route to match (query, body, headers)
+- `fallback`: Response to use when conditions don't match
+- `errorCode`: HTTP error code to return
+- `errorMessage`: Custom error message
 
-Each route in the `routes` array supports:
+### Template Variables
 
-```typescript
-{
-  "method": string,        // HTTP method (GET, POST, PUT, DELETE, PATCH)
-  "path": string,         // URL path (supports Express path params)
-  "response": any,        // Response data (supports templates)
-  "delay": number,        // Response delay in milliseconds
-  "errorCode": number,    // HTTP error code (400-599)
-  "errorMessage": string, // Custom error message
-  "headers": object,      // Route-specific headers
-  "conditions": {         // Request matching conditions
-    "query": object,      // Match query parameters
-    "headers": object,    // Match request headers
-    "body": object       // Match request body
-  },
-  "fallback": any        // Response when conditions don't match
-}
-```
+- `{{path_parameter}}`: Any path parameter (e.g., `{{id}}` for `/users/:id`)
+- `{{body.property}}`: Any property from the request body
+- `{{query.parameter}}`: Any query parameter
+- `{{headers.name}}`: Any request header
+- `{{now}}`: Current date and time
+- `{{uuid}}`: Random UUID v4
+- `{{random min max}}`: Random number between min and max
+- `{{responseTime}}`: Response time in milliseconds
 
-### Template System
-
-#### Available Variables
-
-- **Request Parameters**: `{{paramName}}`
-  ```json
-  { "path": "/users/:id", "response": { "userId": "{{id}}" } }
-  ```
-
-- **Query Parameters**: `{{queryName}}`
-  ```json
-  { "response": { "page": "{{page}}", "limit": "{{limit}}" } }
-  ```
-
-- **Body Fields**: `{{bodyField}}`
-  ```json
-  { "response": { "echo": "{{message}}" } }
-  ```
-
-- **Request Info**: 
-  ```json
-  {
-    "response": {
-      "method": "{{method}}",
-      "path": "{{path}}",
-      "authHeader": "{{headers.authorization}}"
-    }
-  }
-  ```
-
-#### Built-in Helpers
-
-- **Current Timestamp**: 
-  ```json
-  { "timestamp": "{{now}}" }  // Returns ISO timestamp
-  ```
-
-- **Random Numbers**: 
-  ```json
-  { "id": "{{random 1 1000}}" }  // Random number between 1-1000
-  ```
-
-- **UUID Generation**: 
-  ```json
-  { "requestId": "{{uuid}}" }  // Generates UUID v4
-  ```
-
-- **Response Time**: 
-  ```json
-  { "latency": "{{responseTime}}" }  // Processing time in ms
-  ```
-
-## Advanced Usage
-
-### Conditional Responses
-
-Match specific request parameters:
+## Example Configuration
 
 ```json
 {
-  "method": "GET",
-  "path": "/api/content",
-  "conditions": {
-    "query": { 
-      "type": "premium",
-      "version": "v2"
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/users/:id",
+      "response": {
+        "id": "{{id}}",
+        "name": "User {{id}}",
+        "createdAt": "{{now}}"
+      }
     },
-    "headers": {
-      "authorization": "Bearer token",
-      "x-api-version": "2.0"
+    {
+      "method": "POST",
+      "path": "/users",
+      "response": {
+        "id": "{{random 1000 9999}}",
+        "name": "{{body.name}}",
+        "createdAt": "{{now}}"
+      },
+      "headers": {
+        "X-Created-At": "{{now}}",
+        "X-Request-ID": "{{uuid}}"
+      }
     },
-    "body": {
-      "userId": "123"
+    {
+      "method": "GET",
+      "path": "/error",
+      "errorCode": 500,
+      "errorMessage": "Custom error message"
+    },
+    {
+      "method": "GET",
+      "path": "/conditional",
+      "conditions": {
+        "query": {
+          "type": "premium"
+        }
+      },
+      "response": {
+        "message": "Premium content",
+        "features": ["advanced", "premium"]
+      },
+      "fallback": {
+        "message": "Basic content",
+        "features": ["basic"]
+      }
     }
-  },
-  "response": {
-    "type": "premium",
-    "features": ["advanced", "premium"]
-  },
-  "fallback": {
-    "type": "basic",
-    "features": ["basic"]
-  }
-}
-```
-
-### Error Simulation
-
-Simulate API errors:
-
-```json
-{
-  "method": "GET",
-  "path": "/error/unauthorized",
-  "errorCode": 401,
-  "errorMessage": "Invalid or expired token",
-  "headers": {
-    "WWW-Authenticate": "Bearer"
-  }
-}
-```
-
-### Global Headers
-
-Apply headers to all responses:
-
-```json
-{
+  ],
   "globals": {
     "headers": {
-      "Access-Control-Allow-Origin": "*",
-      "X-API-Version": "1.0",
-      "X-Request-ID": "{{uuid}}",
+      "X-Powered-By": "Express Template Mock Server",
       "X-Response-Time": "{{responseTime}}"
     }
   }
 }
 ```
 
-### CORS Configuration
-
-Customize Cross-Origin Resource Sharing (CORS) settings:
-
-```json
-{
-  "globals": {
-    "cors": {
-      "origin": "https://yourfrontend.com",
-      "methods": ["GET", "POST", "PUT", "DELETE"],
-      "allowedHeaders": ["Content-Type", "Authorization"],
-      "exposedHeaders": ["X-Request-ID", "X-Response-Time"],
-      "credentials": true,
-      "maxAge": 86400
-    }
-  }
-}
-```
-
-You can also disable CORS completely:
-
-```json
-{
-  "globals": {
-    "cors": false
-  }
-}
-```
-
-Or use default CORS settings (allow all origins):
-
-```json
-{
-  "globals": {
-    "cors": true
-  }
-}
-```
-
-If not specified, CORS is enabled with default settings (equivalent to `"cors": true`).
-
 ## Error Handling
 
-The server provides detailed error information:
+The server provides detailed error messages for:
+- Missing or invalid configuration files
+- Malformed JSON in configuration
+- Template processing errors
+- Invalid route definitions
 
-- **Config Validation**:
-  - Invalid JSON syntax
-  - Missing required fields
-  - Invalid route configurations
-  - Malformed conditions
-
-- **Runtime Errors**:
-  - Template processing errors
-  - Request matching failures
-  - Invalid response data
-  - Server errors
-
-Error responses include:
-```json
-{
-  "error": "Error message"
-}
-```
-
-## TypeScript Support
-
-This package includes TypeScript type definitions. Import and use the types:
-
-```typescript
-import createMockServer, { MockServerConfig, RouteConfig } from 'express-template-mock-server';
-
-// Example usage with TypeScript
-const config: MockServerConfig = {
-  routes: [
-    {
-      method: 'GET',
-      path: '/api/users',
-      response: [{ id: 1, name: 'User 1' }]
-    }
-  ]
-};
-
-// Write your config to a file and use it
-const server = createMockServer('path/to/config.json');
-server.start(3000).then(() => {
-  console.log('Server started');
-});
-```
-
-## Programmatic Usage
-
-You can use the server programmatically in your tests or applications:
-
-```javascript
-const createMockServer = require('express-template-mock-server');
-
-// Create a server instance
-const server = createMockServer('./mocks.json');
-
-// Start the server
-async function startServer() {
-  try {
-    await server.start(3000);
-    console.log('Mock server running on port 3000');
-  } catch (error) {
-    console.error('Failed to start server:', error);
-  }
-}
-
-// Stop the server when done
-async function stopServer() {
-  await server.stop();
-  console.log('Server stopped');
-}
-
-// Use in your tests
-startServer()
-  .then(() => {
-    // Run your tests against the mock server
-    return fetch('http://localhost:3000/users');
-  })
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .then(stopServer)
-  .catch(console.error);
-```
-
-## Security Considerations
-
-The Express Template Mock Server is designed for development and testing environments. For security:
-
-- **Do not use in production environments**
-- Set up appropriate CORS restrictions for your dev environment
-- Be aware that the server does not include authentication by default
-- Consider using a reverse proxy like nginx when exposing to non-local environments
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Run the tests (`npm test`)
-4. Commit your changes (`git commit -am 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+Errors are logged to the console and returned as JSON responses with appropriate HTTP status codes.
 
 ## License
 
-This project is licensed under the ISC License - see the LICENSE file for details.
+ISC
 
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for the project history and version details. 

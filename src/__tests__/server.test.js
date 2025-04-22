@@ -29,7 +29,7 @@ describe('MockServer', () => {
   const mockConfig = {
     globals: {
       headers: {
-        'X-Powered-By': 'Easy Mock Server',
+        'X-Powered-By': 'Express Template Mock Server',
         'X-Response-Time': '{{responseTime}}'
       }
     },
@@ -248,6 +248,17 @@ describe('MockServer', () => {
       const response = await request('http://localhost:4000').get('/template-error');
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Internal server error');
+    });
+
+    it('should handle response headers', async () => {
+      const response = await request('http://localhost:4000').get('/users');
+      expect(response.headers).toMatchObject({
+        'content-type': 'application/json; charset=utf-8',
+        'x-response-time': expect.any(String),
+        'X-Powered-By': 'Express Template Mock Server',
+        'x-content-type-options': 'nosniff',
+        'x-frame-options': 'DENY'
+      });
     });
   });
 

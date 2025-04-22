@@ -14,6 +14,7 @@ const log = (message, debug = false) => {
   // Only show debug logs in development or test mode, or if DEBUG env var is set
   const isDebugEnabled = process.env.NODE_ENV !== 'production' || process.env.DEBUG;
   if (!debug || isDebugEnabled) {
+    // eslint-disable-next-line no-console
     console.log(message);
   }
 };
@@ -61,51 +62,6 @@ Handlebars.registerHelper('responseTime', function() {
 });
 
 /**
- * Validates the server configuration
- * @param {Object} config - The configuration object to validate
- * @param {Array} config.routes - Array of route configurations
- * @param {Object} [config.globals] - Global configuration options
- * @param {Object} [config.globals.headers] - Global headers
- * @param {Object|boolean} [config.globals.cors] - CORS configuration options
- * @throws {Error} If the configuration is invalid
- */
-const validateConfig = (config) => {
-  if (!config || !Array.isArray(config.routes)) {
-    throw new Error('Config must have a "routes" array');
-  }
-
-  // Validate global CORS configuration if present
-  if (config.globals && config.globals.cors && typeof config.globals.cors === 'object') {
-    const validCorsFields = [
-      'origin', 'methods', 'allowedHeaders', 'exposedHeaders', 
-      'credentials', 'maxAge', 'preflightContinue', 'optionsSuccessStatus'
-    ];
-    
-    const corsKeys = Object.keys(config.globals.cors);
-    const invalidFields = corsKeys.filter(key => !validCorsFields.includes(key));
-    
-    if (invalidFields.length > 0) {
-      throw new Error(`Invalid CORS configuration fields: ${invalidFields.join(', ')}`);
-    }
-  }
-
-  // Validate routes
-  for (const route of config.routes) {
-    if (!route.method || !route.path) {
-      throw new Error('Each route must have a method and path');
-    }
-
-    if (!route.response && !route.errorCode) {
-      throw new Error('Each route must have either a response or errorCode');
-    }
-
-    if (route.conditions) {
-      validateConditions(route.conditions);
-    }
-  }
-};
-
-/**
  * Validates the conditions object in a route configuration
  * @param {Object} conditions - The conditions object to validate
  * @param {Object} [conditions.query] - Query parameters conditions
@@ -123,6 +79,96 @@ const validateConditions = (conditions) => {
 };
 
 /**
+ * Validates CORS options
+ * @param {Object} corsOptions - CORS configuration options
+ * @throws {Error} If the CORS options contain invalid fields or values
+ */
+const validateCorsOptions = (corsOptions) => {
+  // Valid CORS option field names
+  const validFields = [
+    'origin', 'methods', 'allowedHeaders', 'exposedHeaders', 
+    'credentials', 'maxAge', 'preflightContinue', 'optionsSuccessStatus'
+  ];
+  
+  // Check for invalid field names
+  const corsKeys = Object.keys(corsOptions);
+  const invalidFields = corsKeys.filter(key => !validFields.includes(key));
+  
+  if (invalidFields.length > 0) {
+    throw new Error(`Invalid CORS configuration fields: ${invalidFields.join(', ')}`);
+  }
+  
+  // Validate field values
+  if (corsOptions.methods && !Array.isArray(corsOptions.methods) && typeof corsOptions.methods !== 'string') {
+    throw new Error('CORS methods must be a string or an array of strings');
+  }
+  
+  if (corsOptions.allowedHeaders && !Array.isArray(corsOptions.allowedHeaders) && typeof corsOptions.allowedHeaders !== 'string') {
+    throw new Error('CORS allowedHeaders must be a string or an array of strings');
+  }
+  
+  if (corsOptions.exposedHeaders && !Array.isArray(corsOptions.exposedHeaders) && typeof corsOptions.exposedHeaders !== 'string') {
+    throw new Error('CORS exposedHeaders must be a string or an array of strings');
+  }
+  
+  if (corsOptions.maxAge !== undefined && typeof corsOptions.maxAge !== 'number') {
+    throw new Error('CORS maxAge must be a number');
+  }
+  
+  if (corsOptions.credentials !== undefined && typeof corsOptions.credentials !== 'boolean') {
+    throw new Error('CORS credentials must be a boolean');
+  }
+  
+  if (corsOptions.optionsSuccessStatus !== undefined && 
+     (typeof corsOptions.optionsSuccessStatus !== 'number' || 
+      corsOptions.optionsSuccessStatus < 200 || 
+      corsOptions.optionsSuccessStatus > 299)) {
+    throw new Error('CORS optionsSuccessStatus must be a valid 2xx HTTP status code');
+  }
+};
+
+/**
+ * Validates the server configuration
+ * @param {Object} config - The configuration object to validate
+ * @param {Array} config.routes - Array of route configurations
+ * @param {Object} [config.globals] - Global configuration options
+ * @param {Object} [config.globals.headers] - Global headers
+ * @param {Object|boolean} [config.globals.cors] - CORS configuration options
+ * @throws {Error} If the configuration is invalid
+ */
+const validateConfig = (config) => {
+  if (!config || !Array.isArray(config.routes)) {
+    throw new Error('Config must have a "routes" array');
+  }
+
+  // Validate global CORS configuration if present
+  if (config.globals && config.globals.cors && typeof config.globals.cors === 'object') {
+    validateCorsOptions(config.globals.cors);
+  }
+
+  // Validate routes
+  for (const route of config.routes) {
+    if (!route.method || !route.path) {
+      throw new Error('Each route must have a method and path');
+    }
+
+    if (route.conditions) {
+      validateConditions(route.conditions);
+    }
+
+    if (route.errorCode !== undefined) {
+      if (typeof route.errorCode !== 'number' || route.errorCode < 400 || route.errorCode > 599) {
+        throw new Error('errorCode must be a valid HTTP error status code (400-599)');
+      }
+    }
+
+    if (route.delay !== undefined && (typeof route.delay !== 'number' || route.delay < 0)) {
+      throw new Error('delay must be a non-negative number');
+    }
+  }
+};
+
+/**
  * Processes a template string with Handlebars
  * @param {string} template - The template string to process
  * @param {Object} data - The data to use for template processing
@@ -135,22 +181,39 @@ const processTemplate = (template, data) => {
       throw new Error('Template must be a string');
     }
 
-    // Ensure data is an object
-    const safeData = data || {};
+    // Ensure data is a safe object without circular references
+    let templateData = data || {};
     
     // Debug info for startTime
-    if (typeof safeData.startTime !== 'number') {
-      log(`Warning: startTime is ${safeData.startTime} in template data`, true);
+    if (typeof templateData.startTime !== 'number') {
+      log(`Warning: startTime is ${templateData.startTime} in template data`, true);
       // Add a fallback startTime
-      safeData.startTime = Date.now();
+      templateData.startTime = Date.now();
+    }
+
+    // Detect circular references (simplified check)
+    try {
+      JSON.stringify(templateData);
+    } catch (e) {
+      if (e.message.includes('circular')) {
+        log('Warning: Circular reference detected in template data', true);
+        // Create a safe copy without circular references
+        const safeDataCopy = {};
+        for (const key in templateData) {
+          if (typeof templateData[key] !== 'object' || templateData[key] === null) {
+            safeDataCopy[key] = templateData[key];
+          }
+        }
+        templateData = safeDataCopy;
+      }
     }
 
     const compiledTemplate = Handlebars.compile(template);
-    const result = compiledTemplate(safeData);
+    const result = compiledTemplate(templateData);
 
     if (result === undefined || result === '') {
-      log(`Empty result for template: ${template} with data: ${JSON.stringify(safeData)}`, true);
-      throw new Error('Template produced empty result');
+      log(`Empty result for template: ${template} with data: ${JSON.stringify(templateData)}`, true);
+      throw new Error(`Template produced empty result for template: ${template}`);
     }
 
     return result;

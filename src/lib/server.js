@@ -74,26 +74,47 @@ const loadConfig = async (configPath) => {
  * @param {Object} config - Server configuration
  */
 const setupCorsMiddleware = (app, config) => {
-  if (config.globals && config.globals.cors !== undefined) {
-    // If cors is explicitly set to false, don't use cors middleware
-    if (config.globals.cors === false) {
-      log('CORS disabled by configuration');
-      return;
+  try {
+    if (config.globals && config.globals.cors !== undefined) {
+      // If cors is explicitly set to false, don't use cors middleware
+      if (config.globals.cors === false) {
+        log('CORS disabled by configuration');
+        return;
+      }
+      
+      // Apply cors middleware with options from config
+      const corsOptions = typeof config.globals.cors === 'object' 
+        ? config.globals.cors 
+        : {}; // Default to empty object for default CORS settings
+      
+      log(`Setting up CORS with options: ${JSON.stringify(corsOptions)}`);
+      app.use(cors(corsOptions));
+      app.options('*', cors(corsOptions));
+    } else {
+      // Default behavior - enable CORS with default settings
+      log('Setting up CORS with default settings');
+      app.use(cors());
+      app.options('*', cors());
     }
-    
-    // Apply cors middleware with options from config
-    const corsOptions = typeof config.globals.cors === 'object' 
-      ? config.globals.cors 
-      : {}; // Default to empty object for default CORS settings
-    
-    log(`Setting up CORS with options: ${JSON.stringify(corsOptions)}`);
-    app.use(cors(corsOptions));
-    app.options('*', cors(corsOptions));
-  } else {
-    // Default behavior - enable CORS with default settings
-    log('Setting up CORS with default settings');
-    app.use(cors());
-    app.options('*', cors());
+  } catch (error) {
+    log(`Error setting up CORS middleware: ${error.message}`);
+    throw new Error(`Failed to configure CORS: ${error.message}`);
+  }
+};
+
+/**
+ * Process a header value with template substitution
+ * @param {string} header - Header name
+ * @param {string} value - Header value template
+ * @param {Object} data - Data for template substitution
+ * @returns {string} Processed header value
+ */
+const processHeaderValue = (header, value, data) => {
+  try {
+    return processTemplate(value, data);
+  } catch (error) {
+    log(`Error processing header ${header}: ${error.message}`);
+    throw new Error(`Header processing failed for ${header}: ${error.message}`);
   }
 };
 
@@ -141,6 +162,8 @@ const setupShutdownMiddleware = (app, state) => {
 const setupGlobalHeadersMiddleware = (app, config) => {
   if (config.globals && config.globals.headers) {
     app.use((req, res, next) => {
+      const headerErrors = [];
+      
       for (const [header, value] of Object.entries(config.globals.headers)) {
         try {
           const headerData = { 
@@ -150,11 +173,19 @@ const setupGlobalHeadersMiddleware = (app, config) => {
           
           log(`Processing global header ${header} with data:`, JSON.stringify(headerData), true);
           
-          res.set(header, processTemplate(value, headerData));
+          res.set(header, processHeaderValue(header, value, headerData));
         } catch (error) {
           log(`Error processing global header ${header}: ${error.message}`);
+          headerErrors.push(error.message);
+          // Continue processing other headers
         }
       }
+      
+      // If there were errors, add a warning header but don't fail the request
+      if (headerErrors.length > 0) {
+        res.set('X-Header-Warning', `Failed to process ${headerErrors.length} headers`);
+      }
+      
       next();
     });
   }
@@ -168,7 +199,7 @@ const setupSecurityHeadersMiddleware = (app) => {
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('X-Frame-Options', 'DENY');
-    res.set('X-XSS-Protection', '1; mode=block');
+    res.set('X-Powered-By', 'Express Template Mock Server');
     next();
   });
 };
@@ -229,6 +260,8 @@ const setupRoutes = (app, config) => {
 
         // Add route-specific headers
         if (route.headers) {
+          const headerErrors = [];
+          
           for (const [header, value] of Object.entries(route.headers)) {
             try {
               // Make sure startTime is included in the template data
@@ -242,12 +275,17 @@ const setupRoutes = (app, config) => {
               
               log(`Processing header ${header} with data:`, JSON.stringify(headerTemplateData), true);
               
-              res.set(header, processTemplate(value, headerTemplateData));
+              res.set(header, processHeaderValue(header, value, headerTemplateData));
             } catch (error) {
               log(`Error processing header ${header}: ${error.message}`);
-              res.status(500).json({ error: 'Internal server error' });
-              return;
+              headerErrors.push(error.message);
+              // Continue processing other headers
             }
+          }
+          
+          // If there were errors, add a warning header but don't fail the request
+          if (headerErrors.length > 0) {
+            res.set('X-Header-Warning', `Failed to process ${headerErrors.length} headers`);
           }
         }
 
