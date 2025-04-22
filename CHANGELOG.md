@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.1 (2025-04-22)
+
+### Improvements
+- Fixed TypeScript module declaration to correctly reference package name
+- Improved middleware organization for better maintainability
+- Enhanced responseTime helper to better handle missing startTime
+- Improved graceful shutdown handling
+- Removed unused fastify dependency
+- Updated documentation to consistently use the new package name
+- Code quality and organization improvements
+
 ## 1.1.0 (2025-04-22)
 
 ### Features

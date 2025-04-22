@@ -1,4 +1,4 @@
-declare module 'easy-mock-server' {
+declare module 'express-template-mock-server' {
   /**
    * Configuration for a mock server route
    */

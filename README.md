@@ -305,7 +305,7 @@ Error responses include:
 This package includes TypeScript type definitions. Import and use the types:
 
 ```typescript
-import createMockServer, { MockServerConfig, RouteConfig } from 'easy-mock-server';
+import createMockServer, { MockServerConfig, RouteConfig } from 'express-template-mock-server';
 
 // Example usage with TypeScript
 const config: MockServerConfig = {
@@ -330,7 +330,7 @@ server.start(3000).then(() => {
 You can use the server programmatically in your tests or applications:
 
 ```javascript
-const createMockServer = require('easy-mock-server');
+const createMockServer = require('express-template-mock-server');
 
 // Create a server instance
 const server = createMockServer('./mocks.json');
@@ -365,7 +365,7 @@ startServer()
 
 ## Security Considerations
 
-The Easy Mock Server is designed for development and testing environments. For security:
+The Express Template Mock Server is designed for development and testing environments. For security:
 
 - **Do not use in production environments**
 - Set up appropriate CORS restrictions for your dev environment

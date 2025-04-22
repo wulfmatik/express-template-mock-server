@@ -69,37 +69,39 @@ const loadConfig = async (configPath) => {
 };
 
 /**
- * Sets up middleware for the Express application
+ * Sets up the CORS middleware
  * @param {Object} app - Express application
- * @param {Object} state - Server state
  * @param {Object} config - Server configuration
  */
-const setupMiddleware = (app, state, config) => {
-  // Setup CORS with configurable options
-  if (config.globals && config.globals.cors) {
+const setupCorsMiddleware = (app, config) => {
+  if (config.globals && config.globals.cors !== undefined) {
     // If cors is explicitly set to false, don't use cors middleware
     if (config.globals.cors === false) {
       log('CORS disabled by configuration');
-    } else {
-      // Apply cors middleware with options from config
-      const corsOptions = typeof config.globals.cors === 'object' 
-        ? config.globals.cors 
-        : {}; // Default to empty object for default CORS settings
-      
-      log(`Setting up CORS with options: ${JSON.stringify(corsOptions)}`);
-      app.use(cors(corsOptions));
-      
-      // Setup OPTIONS handler for preflight requests
-      app.options('*', cors(corsOptions));
+      return;
     }
+    
+    // Apply cors middleware with options from config
+    const corsOptions = typeof config.globals.cors === 'object' 
+      ? config.globals.cors 
+      : {}; // Default to empty object for default CORS settings
+    
+    log(`Setting up CORS with options: ${JSON.stringify(corsOptions)}`);
+    app.use(cors(corsOptions));
+    app.options('*', cors(corsOptions));
   } else {
     // Default behavior - enable CORS with default settings
     log('Setting up CORS with default settings');
     app.use(cors());
     app.options('*', cors());
   }
+};
 
-  // Add middleware for response time tracking
+/**
+ * Sets up response time tracking middleware
+ * @param {Object} app - Express application
+ */
+const setupResponseTimeMiddleware = (app) => {
   app.use((req, res, next) => {
     // Ensure startTime is properly set as a number
     req.startTime = Date.now();
@@ -114,8 +116,14 @@ const setupMiddleware = (app, state, config) => {
     
     next();
   });
+};
 
-  // Add middleware for shutdown handling
+/**
+ * Sets up shutdown handling middleware
+ * @param {Object} app - Express application
+ * @param {Object} state - Server state
+ */
+const setupShutdownMiddleware = (app, state) => {
   app.use((req, res, next) => {
     if (state.isShuttingDown) {
       res.status(503).json({ error: 'Server is shutting down' });
@@ -123,8 +131,14 @@ const setupMiddleware = (app, state, config) => {
     }
     next();
   });
+};
 
-  // Add global headers
+/**
+ * Sets up global headers middleware
+ * @param {Object} app - Express application
+ * @param {Object} config - Server configuration
+ */
+const setupGlobalHeadersMiddleware = (app, config) => {
   if (config.globals && config.globals.headers) {
     app.use((req, res, next) => {
       for (const [header, value] of Object.entries(config.globals.headers)) {
@@ -144,20 +158,45 @@ const setupMiddleware = (app, state, config) => {
       next();
     });
   }
+};
 
-  // Add security headers
+/**
+ * Sets up security headers middleware
+ * @param {Object} app - Express application
+ */
+const setupSecurityHeadersMiddleware = (app) => {
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('X-Frame-Options', 'DENY');
     res.set('X-XSS-Protection', '1; mode=block');
     next();
   });
+};
 
-  // Add error handler
+/**
+ * Sets up error handling middleware
+ * @param {Object} app - Express application
+ */
+const setupErrorHandlingMiddleware = (app) => {
   app.use((err, req, res, _next) => {
     log(`Server error: ${err.message}`);
     res.status(500).json({ error: 'Internal server error' });
   });
+};
+
+/**
+ * Sets up middleware for the Express application
+ * @param {Object} app - Express application
+ * @param {Object} state - Server state
+ * @param {Object} config - Server configuration
+ */
+const setupMiddleware = (app, state, config) => {
+  setupCorsMiddleware(app, config);
+  setupResponseTimeMiddleware(app);
+  setupShutdownMiddleware(app, state);
+  setupGlobalHeadersMiddleware(app, config);
+  setupSecurityHeadersMiddleware(app);
+  setupErrorHandlingMiddleware(app);
 };
 
 /**
@@ -255,29 +294,40 @@ const setupRoutes = (app, config) => {
 };
 
 /**
- * Initiates a graceful server shutdown
- * @param {Object} state - Server state
+ * Performs graceful shutdown of the server
+ * @param {Object} state - Server state object
  */
-const gracefulShutdown = (state) => {
+const gracefulShutdown = async (state) => {
   log('\nInitiating graceful shutdown...');
+  
+  if (state.isShuttingDown) {
+    return;
+  }
+  
   state.isShuttingDown = true;
-
+  
   if (state.server) {
     state.server.close(() => {
       log('Server closed');
+      
+      if (state.watcher) {
+        state.watcher.close();
+      }
+      
+      // Emit event for tests
       if (process.env.NODE_ENV === 'test') {
         process.emit('serverClosed');
       } else {
         process.exit(0);
       }
     });
-
-    // Force shutdown after 10 seconds
-    state.shutdownTimeout = setTimeout(() => {
-      console.error('Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 10000);
   }
+
+  // Force shutdown after 10 seconds
+  state.shutdownTimeout = setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
 };
 
 /**
