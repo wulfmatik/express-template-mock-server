@@ -1,6 +1,6 @@
 {
   "name": "express-template-mock-server",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A configurable HTTP mock server with support for templates, conditions, delays and more",
   "main": "src/lib/server.js",
   "bin": {
