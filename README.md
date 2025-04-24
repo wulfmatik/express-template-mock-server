@@ -1,7 +1,7 @@
 # Express Template Mock Server
 
 [![npm version](https://img.shields.io/npm/v/express-template-mock-server.svg)](https://www.npmjs.com/package/express-template-mock-server)
-[![Test Coverage](https://img.shields.io/codecov/c/github/wulfmatik/express-template-mock-server/main.svg)](https://codecov.io/gh/wulfmatik/express-template-mock-server)
+[![Test Coverage](https://img.shields.io/badge/coverage-69%25-yellowgreen)](https://github.com/wulfmatik/express-template-mock-server/tree/main/coverage/lcov-report)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 > A powerful, zero-config mock server for rapid API development and testing with dynamic template-driven responses.
