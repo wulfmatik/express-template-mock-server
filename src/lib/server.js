@@ -3,7 +3,6 @@
  * @description Main module for the mock server implementation
  */
 const express = require('express');
-const chokidar = require('chokidar');
 const fs = require('fs').promises;
 const cors = require('cors');
 require('dotenv').config();
@@ -209,8 +208,31 @@ const setupSecurityHeadersMiddleware = (app) => {
  * @param {Object} app - Express application
  */
 const setupErrorHandlingMiddleware = (app) => {
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (error) => {
+    log(`Unhandled promise rejection: ${error.message}`);
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    log(`Uncaught exception: ${error.message}`);
+    process.exit(1);
+  });
+
+  // Error handling middleware
   app.use((err, req, res, _next) => {
-    log(`Server error: ${err.message}`);
+    log(`Error processing request: ${err.message}`);
+    
+    // Handle different types of errors
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    
+    if (err.name === 'TemplateError') {
+      return res.status(500).json({ error: 'Template processing error' });
+    }
+    
+    // Default error response
     res.status(500).json({ error: 'Internal server error' });
   });
 };
@@ -336,25 +358,42 @@ const setupRoutes = (app, config) => {
  * @param {Object} state - Server state
  */
 const gracefulShutdown = (state) => {
-  log('\nInitiating graceful shutdown...');
-  
+  if (state.isShuttingDown) {
+    return;
+  }
+
   state.isShuttingDown = true;
-  
+  log('Shutting down gracefully...');
+
+  // Clear any existing shutdown timeout
+  if (state.shutdownTimeout) {
+    clearTimeout(state.shutdownTimeout);
+  }
+
+  // Set a timeout to force shutdown
+  state.shutdownTimeout = setTimeout(() => {
+    log('Forcing shutdown after timeout');
+    process.exit(1);
+  }, 5000);
+
+  // Close the server
   if (state.server) {
     state.server.close(() => {
       log('Server closed');
-      if (process.env.NODE_ENV === 'test') {
-        process.emit('serverClosed');
+      if (state.watcher) {
+        state.watcher.close().then(() => {
+          log('File watcher closed');
+          process.exit(0);
+        }).catch(err => {
+          log(`Error closing watcher: ${err.message}`);
+          process.exit(1);
+        });
       } else {
         process.exit(0);
       }
     });
-
-    // Force shutdown after 10 seconds
-    state.shutdownTimeout = setTimeout(() => {
-      console.error('Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 10000);
+  } else {
+    process.exit(0);
   }
 };
 
@@ -369,43 +408,33 @@ const gracefulShutdown = (state) => {
  */
 const startServer = async (app, state, configPath, port = 3000) => {
   try {
-    // Load configuration
-    state.config = await loadConfig(configPath);
-    
-    // Setup server
-    setupMiddleware(app, state, state.config);
-    setupRoutes(app, state.config);
-    
-    return new Promise((resolve, reject) => {
-      state.server = app.listen(port, () => {
-        log(`Mock server running on port ${port}`);
-        resolve();
-      });
+    // Load and validate config
+    const config = await loadConfig(configPath);
+    state.config = config;
 
-      state.server.on('error', (error) => {
-        console.error('Server error:', error);
-        gracefulShutdown(state);
-        reject(error);
-      });
-      
-      // Watch for config changes
-      if (process.env.NODE_ENV !== 'test') {
-        state.watcher = chokidar.watch(configPath);
-        state.watcher.on('change', async () => {
-          try {
-            log('Config changed, reloading...');
-            state.config = await loadConfig(configPath);
-            
-            // Reset routes
-            app._router.stack = app._router.stack.filter(layer => !layer.route);
-            setupMiddleware(app, state, state.config);
-            setupRoutes(app, state.config);
-            
-            log('Routes reloaded successfully');
-          } catch (error) {
-            log(`Error reloading config: ${error.message}`);
-          }
+    // Setup middleware
+    setupMiddleware(app, state, config);
+
+    // Setup routes
+    setupRoutes(app, config);
+
+    // Start server
+    return new Promise((resolve, reject) => {
+      let serverInstance;
+      try {
+        serverInstance = app.listen(port, () => {
+          log(`Server started on port ${port}`);
+          state.server = serverInstance;
+          resolve(serverInstance);
         });
+
+        serverInstance.on('error', (err) => {
+          log(`Server error: ${err.message}`);
+          reject(err);
+        });
+      } catch (err) {
+        log(`Failed to start server: ${err.message}`);
+        reject(err);
       }
     });
   } catch (error) {
@@ -420,19 +449,45 @@ const startServer = async (app, state, configPath, port = 3000) => {
  * @returns {Promise<void>} Resolves when the server has stopped
  */
 const stopServer = async (state) => {
-  if (state.server) {
-    if (state.shutdownTimeout) {
-      clearTimeout(state.shutdownTimeout);
-      state.shutdownTimeout = null;
-    }
-    
+  try {
+    // Stop file watching if active
     if (state.watcher) {
       await state.watcher.close();
       state.watcher = null;
     }
-    
-    await new Promise(resolve => state.server.close(resolve));
-    state.server = null;
+
+    // Stop the server if it exists
+    if (state.server) {
+      await new Promise((resolve, reject) => {
+        state.server.close((err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+      state.server = null;
+    }
+
+    // Clear any remaining timeouts
+    if (state.shutdownTimeout) {
+      clearTimeout(state.shutdownTimeout);
+      state.shutdownTimeout = null;
+    }
+
+    // Clear any pending requests
+    if (state.server) {
+      state.server.removeAllListeners();
+    }
+
+    // Reset all state
+    state.isShuttingDown = false;
+    state.config = null;
+    state.app = null;
+  } catch (error) {
+    log(`Error stopping server: ${error.message}`);
+    throw error;
   }
 };
 
@@ -468,4 +523,21 @@ const createMockServer = (configPath) => {
   };
 };
 
-module.exports = createMockServer; 
+/**
+ * Gets an available port for the server to listen on
+ * @returns {Promise<number>} Available port number
+ */
+const getAvailablePort = () => {
+  return new Promise((resolve) => {
+    const server = require('net').createServer();
+    server.listen(0, () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+  });
+};
+
+module.exports = {
+  createMockServer,
+  getAvailablePort
+}; 

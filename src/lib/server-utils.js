@@ -175,51 +175,28 @@ const validateConfig = (config) => {
  * @returns {string} The processed template
  * @throws {Error} If template processing fails
  */
-const processTemplate = (template, data) => {
+const processTemplate = (template, data = {}) => {
   try {
-    if (typeof template !== 'string') {
-      throw new Error('Template must be a string');
+    // Ensure startTime is always available
+    if (!data.startTime) {
+      data.startTime = Date.now();
     }
-
-    // Ensure data is a safe object without circular references
-    let templateData = data || {};
     
-    // Debug info for startTime
-    if (typeof templateData.startTime !== 'number') {
-      log(`Warning: startTime is ${templateData.startTime} in template data`, true);
-      // Add a fallback startTime
-      templateData.startTime = Date.now();
-    }
+    // Ensure responseTime helper has access to startTime
+    const responseTimeHelper = function() {
+      const endTime = Date.now();
+      const startTime = data.startTime || endTime;
+      return endTime - startTime;
+    };
 
-    // Detect circular references (simplified check)
-    try {
-      JSON.stringify(templateData);
-    } catch (e) {
-      if (e.message.includes('circular')) {
-        log('Warning: Circular reference detected in template data', true);
-        // Create a safe copy without circular references
-        const safeDataCopy = {};
-        for (const key in templateData) {
-          if (typeof templateData[key] !== 'object' || templateData[key] === null) {
-            safeDataCopy[key] = templateData[key];
-          }
-        }
-        templateData = safeDataCopy;
-      }
-    }
-
-    const compiledTemplate = Handlebars.compile(template);
-    const result = compiledTemplate(templateData);
-
-    if (result === undefined || result === '') {
-      log(`Empty result for template: ${template} with data: ${JSON.stringify(templateData)}`, true);
-      throw new Error(`Template produced empty result for template: ${template}`);
-    }
-
-    return result;
+    const handlebars = require('handlebars');
+    handlebars.registerHelper('responseTime', responseTimeHelper);
+    
+    const compiled = handlebars.compile(JSON.stringify(template));
+    return JSON.parse(compiled(data));
   } catch (error) {
-    log(`Template processing error: ${error.message} for template: ${template}`, true);
-    throw new Error(`Template processing error: ${error.message}`);
+    console.error('Template processing error:', error);
+    throw new Error('Template processing error');
   }
 };
 
@@ -289,6 +266,25 @@ const matchValues = (expected, actual) => {
   if (!actual) return false;
 
   for (const [key, value] of Object.entries(expected)) {
+    // Handle nested objects
+    if (typeof value === 'object' && value !== null && !Array.isArray(value) && 
+        typeof actual[key] === 'object' && actual[key] !== null) {
+      if (!matchValues(value, actual[key])) {
+        return false;
+      }
+      continue;
+    }
+    
+    // Handle arrays - check if all expected items are in the actual array
+    if (Array.isArray(value) && Array.isArray(actual[key])) {
+      const allItemsMatch = value.every(item => actual[key].includes(item));
+      if (!allItemsMatch) {
+        return false;
+      }
+      continue;
+    }
+    
+    // Simple value check
     if (actual[key] !== value) {
       return false;
     }
