@@ -24,13 +24,16 @@ jobs:
     - run: npm ci
     - run: npm run lint
     - run: npm test
-    - name: Generate coverage and upload to Codecov
+    - name: Generate coverage report
       run: npm run test:coverage
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        directory: ./coverage/
+        file: ./coverage/lcov.info
         fail_ci_if_error: false
+        verbose: true
 
   publish:
     needs: test
