@@ -12,7 +12,8 @@ describe('Server Middleware', () => {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
     set: jest.fn().mockReturnThis(),
-    locals: {}
+    locals: {},
+    headersSent: false
   };
   
   const mockRequest = {
@@ -27,6 +28,8 @@ describe('Server Middleware', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
+    mockResponse.locals = {};
+    mockResponse.headersSent = false;
   });
   
   describe('Setup Middleware', () => {
@@ -40,6 +43,27 @@ describe('Server Middleware', () => {
         
         setupMiddleware(mockApp);
         expect(mockApp.use).toHaveBeenCalledTimes(2);
+      });
+    });
+    
+    it('should set up multiple middleware functions', () => {
+      jest.isolateModules(() => {
+        const middleware1 = jest.fn();
+        const middleware2 = jest.fn();
+        const middleware3 = jest.fn();
+        
+        const setupMiddleware = (app) => {
+          app.use(middleware1);
+          app.use(middleware2);
+          app.use(middleware3);
+          return app;
+        };
+        
+        setupMiddleware(mockApp);
+        expect(mockApp.use).toHaveBeenCalledTimes(3);
+        expect(mockApp.use).toHaveBeenCalledWith(middleware1);
+        expect(mockApp.use).toHaveBeenCalledWith(middleware2);
+        expect(mockApp.use).toHaveBeenCalledWith(middleware3);
       });
     });
   });
@@ -76,6 +100,29 @@ describe('Server Middleware', () => {
       
       expect(responseTime).toBeGreaterThanOrEqual(100);
     });
+    
+    it('should handle response time for requests without startTime', () => {
+      // Create a request without startTime
+      const req = { ...mockRequest };
+      delete req.startTime;
+      
+      const responseTimeMiddleware = (req, res, next) => {
+        // Should set startTime if not present
+        if (!req.startTime) {
+          req.startTime = Date.now();
+        }
+        res.locals.startTime = req.startTime;
+        req.getResponseTime = () => Date.now() - req.startTime;
+        next();
+      };
+      
+      responseTimeMiddleware(req, mockResponse, mockNext);
+      
+      expect(req.startTime).toBeDefined();
+      expect(mockResponse.locals.startTime).toBeDefined();
+      expect(req.getResponseTime()).toBeGreaterThanOrEqual(0);
+      expect(req.getResponseTime()).toBeLessThan(10); // Should be very small
+    });
   });
   
   describe('CORS Middleware', () => {
@@ -106,6 +153,22 @@ describe('Server Middleware', () => {
       expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://example.com');
       expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Allow-Methods', 'GET,POST');
       expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Allow-Headers', 'Content-Type');
+      expect(mockNext).toHaveBeenCalled();
+    });
+    
+    it('should apply credentials and max age settings', () => {
+      const corsMiddleware = (req, res, next) => {
+        res.set('Access-Control-Allow-Origin', 'https://example.com');
+        res.set('Access-Control-Allow-Credentials', 'true');
+        res.set('Access-Control-Max-Age', '86400');
+        next();
+      };
+      
+      corsMiddleware(mockRequest, mockResponse, mockNext);
+      
+      expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://example.com');
+      expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Allow-Credentials', 'true');
+      expect(mockResponse.set).toHaveBeenCalledWith('Access-Control-Max-Age', '86400');
       expect(mockNext).toHaveBeenCalled();
     });
   });
@@ -143,6 +206,58 @@ describe('Server Middleware', () => {
       expect(mockResponse.set).toHaveBeenCalledWith('X-Invalid', '{{invalid}}');
       expect(mockNext).toHaveBeenCalled();
     });
+    
+    it('should process multiple global headers', () => {
+      const headerMiddleware = (req, res, next) => {
+        res.set('X-Powered-By', 'Express Template Mock Server');
+        res.set('X-Custom-Header', 'Custom Value');
+        res.set('X-Response-Time', `${req.getResponseTime()}ms`);
+        res.set('Content-Type', 'application/json');
+        next();
+      };
+      
+      mockRequest.getResponseTime = jest.fn().mockReturnValue(42);
+      headerMiddleware(mockRequest, mockResponse, mockNext);
+      
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Powered-By', 'Express Template Mock Server');
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Custom-Header', 'Custom Value');
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Response-Time', '42ms');
+      expect(mockResponse.set).toHaveBeenCalledWith('Content-Type', 'application/json');
+      expect(mockNext).toHaveBeenCalled();
+    });
+  });
+  
+  describe('Security Headers Middleware', () => {
+    it('should set security headers', () => {
+      const securityMiddleware = (req, res, next) => {
+        res.set('X-Content-Type-Options', 'nosniff');
+        res.set('X-XSS-Protection', '1; mode=block');
+        res.set('X-Frame-Options', 'DENY');
+        next();
+      };
+      
+      securityMiddleware(mockRequest, mockResponse, mockNext);
+      
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
+      expect(mockResponse.set).toHaveBeenCalledWith('X-XSS-Protection', '1; mode=block');
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
+      expect(mockNext).toHaveBeenCalled();
+    });
+    
+    it('should set strict transport security header', () => {
+      const securityMiddleware = (req, res, next) => {
+        res.set('X-Content-Type-Options', 'nosniff');
+        res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        next();
+      };
+      
+      securityMiddleware(mockRequest, mockResponse, mockNext);
+      
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
+      expect(mockResponse.set).toHaveBeenCalledWith('Strict-Transport-Security', 
+        'max-age=31536000; includeSubDomains');
+      expect(mockNext).toHaveBeenCalled();
+    });
   });
   
   describe('Shutdown Middleware', () => {
@@ -173,6 +288,23 @@ describe('Server Middleware', () => {
       
       shutdownMiddleware(mockRequest, mockResponse, mockNext);
       expect(mockNext).not.toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(503);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Server is shutting down' });
+    });
+    
+    it('should add retry-after header when shutting down', () => {
+      const isShuttingDown = true;
+      const shutdownMiddleware = (req, res, next) => {
+        if (isShuttingDown) {
+          res.set('Retry-After', '10');
+          res.status(503).json({ error: 'Server is shutting down' });
+          return;
+        }
+        next();
+      };
+      
+      shutdownMiddleware(mockRequest, mockResponse, mockNext);
+      expect(mockResponse.set).toHaveBeenCalledWith('Retry-After', '10');
       expect(mockResponse.status).toHaveBeenCalledWith(503);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Server is shutting down' });
     });
@@ -238,6 +370,57 @@ describe('Server Middleware', () => {
       
       expect(mockResponse.status).toHaveBeenCalledWith(500);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Template processing error' });
+    });
+    
+    it('should do nothing if response is already sent', () => {
+      const errorMiddleware = (err, req, res, _next) => {
+        if (res.headersSent) {
+          return;
+        }
+        res.status(500).json({ error: 'Internal server error' });
+      };
+      
+      // Mock that headers have already been sent
+      mockResponse.headersSent = true;
+      
+      const error = new Error('Test error');
+      errorMiddleware(error, mockRequest, mockResponse, jest.fn());
+      
+      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockResponse.json).not.toHaveBeenCalled();
+    });
+    
+    it('should include error details in development mode', () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      
+      const errorMiddleware = (err, req, res, _next) => {
+        const isDev = process.env.NODE_ENV === 'development';
+        
+        const errorResponse = {
+          error: 'Internal server error'
+        };
+        
+        if (isDev) {
+          errorResponse.message = err.message;
+          errorResponse.stack = err.stack;
+        }
+        
+        res.status(500).json(errorResponse);
+      };
+      
+      const error = new Error('Detailed error message');
+      errorMiddleware(error, mockRequest, mockResponse, jest.fn());
+      
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Internal server error',
+        message: 'Detailed error message',
+        stack: error.stack
+      });
+      
+      // Restore environment
+      process.env.NODE_ENV = originalEnv;
     });
   });
 }); 

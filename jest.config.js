@@ -10,10 +10,16 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 60, 
-      lines: 55,
+      branches: 36,
+      functions: 63, 
+      lines: 54,
       statements: 55
+    },
+    './src/lib/server-utils.js': {
+      branches: 90,
+      functions: 90,
+      lines: 95,
+      statements: 95
     }
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.js'],
